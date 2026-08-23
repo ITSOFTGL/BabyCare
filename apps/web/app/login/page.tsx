@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { TENANT_NAME } from '@/lib/api';
+import { getTenantName } from '@/lib/api';
 import { Button, ErrorText, Field, Input } from '@/components/ui';
 
 export default function LoginPage() {
@@ -43,7 +43,7 @@ export default function LoginPage() {
             🧸
           </div>
           <h1 className="text-3xl font-bold text-primary">KidCare</h1>
-          <p className="mt-1 text-sm font-medium text-ink/55">{TENANT_NAME}</p>
+          <p className="mt-1 text-sm font-medium text-ink/55">{getTenantName()}</p>
         </div>
 
         <form

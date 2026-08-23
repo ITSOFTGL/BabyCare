@@ -27,8 +27,10 @@ services:
     container_name: kidcare-${TENANT_SLUG}-frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: https://${SUBDOMAIN}.tudominio.com/api
-      NEXT_PUBLIC_TENANT_NAME: ${TENANT_NAME}
+      # Se leen en runtime (no en build), por eso la misma imagen sirve para
+      # cualquier cliente: ver apps/web/app/layout.tsx y apps/web/lib/api.ts.
+      API_URL: https://${SUBDOMAIN}.tudominio.com/api
+      TENANT_NAME: ${TENANT_NAME}
     depends_on: [backend]
     networks: [kidcare_net]
 

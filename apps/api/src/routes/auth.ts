@@ -24,11 +24,10 @@ const changePasswordSchema = z.object({
 
 export const authRoutes = new Hono<AppEnv>();
 
-// Ventanas de 15 minutos: por IP (frena abuso general de la ruta) y por
+// Ventana de 15 minutos: por IP (frena abuso general de la ruta) y por
 // email (protege una cuenta puntual aunque el ataque venga de muchas IPs).
+// Los limites en si viven en env.loginMaxPerIp/loginMaxPerEmail.
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_PER_IP = 20;
-const LOGIN_MAX_PER_EMAIL = 5;
 
 authRoutes.post('/login', async (c) => {
   const { email, password } = await parseBody(c, loginSchema);
@@ -36,11 +35,11 @@ authRoutes.post('/login', async (c) => {
   const ip = clientIp(c);
 
   const ipLimit = rateLimit(`login:ip:${ip}`, {
-    max: LOGIN_MAX_PER_IP,
+    max: env.loginMaxPerIp,
     windowMs: LOGIN_WINDOW_MS,
   });
   const emailLimit = rateLimit(`login:email:${normalizedEmail}`, {
-    max: LOGIN_MAX_PER_EMAIL,
+    max: env.loginMaxPerEmail,
     windowMs: LOGIN_WINDOW_MS,
   });
 

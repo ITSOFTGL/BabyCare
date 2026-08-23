@@ -28,4 +28,13 @@ export const env = {
   cookieSecure: process.env.COOKIE_SECURE
     ? process.env.COOKIE_SECURE === 'true'
     : process.env.NODE_ENV === 'production',
+  /**
+   * Limites de /auth/login en una ventana de 15 minutos. El de IP es
+   * generoso a proposito: varias profesoras de la MISMA guarderia suelen
+   * compartir el WiFi de la oficina (misma IP publica hacia Cloudflare), asi
+   * que un limite bajo bloquearia uso legitimo. El de email es el que hace
+   * el trabajo real contra fuerza bruta, por eso es mucho mas estricto.
+   */
+  loginMaxPerIp: Number(process.env.LOGIN_MAX_PER_IP ?? 40),
+  loginMaxPerEmail: Number(process.env.LOGIN_MAX_PER_EMAIL ?? 5),
 };

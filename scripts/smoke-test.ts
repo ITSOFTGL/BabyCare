@@ -247,6 +247,52 @@ check(forbiddenActivity.status === 403, 'el padre NO puede escribir en la agenda
 const forbiddenUsers = await call('/users', { token: parentToken });
 check(forbiddenUsers.status === 403, 'el padre NO puede listar cuentas (403)');
 
+// --- 7. Comunicados -----------------------------------------------------------
+console.log('\n7. La directora envía un comunicado individual');
+const announcement = await call('/announcements', {
+  token: admin,
+  method: 'POST',
+  body: {
+    audience: 'padre',
+    title: 'Recordatorio de excursión',
+    message: 'Mañana salimos al parque, traer gorra y protector solar.',
+    childId,
+  },
+});
+check(
+  announcement.status === 201 && announcement.data.recipientCount === 1,
+  'POST /announcements a un alumno puntual llega a 1 destinatario',
+  announcement.data,
+);
+
+const notificationsAfterAnnouncement = await call('/notifications', {
+  token: parentToken,
+});
+check(
+  notificationsAfterAnnouncement.data.some(
+    (n: { type: string; title: string }) =>
+      n.type === 'comunicado' && n.title.includes('Recordatorio de excursión'),
+  ),
+  'el padre recibe el comunicado como notificación in-app',
+  notificationsAfterAnnouncement.data,
+);
+
+const announcementList = await call('/announcements', { token: admin });
+check(
+  announcementList.data?.some((a: { id: string }) => a.id === announcement.data.id),
+  'GET /announcements lo muestra en el historial de la directora',
+);
+
+const forbiddenAnnouncement = await call('/announcements', {
+  token: teacherToken,
+  method: 'POST',
+  body: { audience: 'todos', title: 'No debería poder', message: 'x' },
+});
+check(
+  forbiddenAnnouncement.status === 403,
+  'la profesora NO puede enviar comunicados (403)',
+);
+
 // --- Resultado --------------------------------------------------------------
 console.log(
   failures === 0

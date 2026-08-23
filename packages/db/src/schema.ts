@@ -53,6 +53,19 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'pago',
   'agenda',
   'alerta',
+  'comunicado',
+]);
+
+/**
+ * A quien llega un comunicado: a todos los padres, a los de una sala, o al
+ * padre de un alumno puntual. La entrega en si (in-app) reutiliza la tabla
+ * `notifications` existente; esta tabla solo guarda el comunicado en si y a
+ * quien iba dirigido, para el historial de la directora.
+ */
+export const announcementAudienceEnum = pgEnum('announcement_audience', [
+  'todos',
+  'sala',
+  'padre',
 ]);
 
 export const users = pgTable('users', {
@@ -203,6 +216,27 @@ export const notifications = pgTable('notifications', {
     .defaultNow(),
 });
 
+export const announcements = pgTable('announcements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  audience: announcementAudienceEnum('audience').notNull(),
+  /** Solo cuando audience = 'sala'. */
+  roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'set null' }),
+  /** Solo cuando audience = 'padre': el comunicado va al apoderado de este nino. */
+  childId: uuid('child_id').references(() => children.id, {
+    onDelete: 'set null',
+  }),
+  createdBy: uuid('created_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  /** Cuantos apoderados distintos lo recibieron, para el historial. */
+  recipientCount: integer('recipient_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type NewUserRow = typeof users.$inferInsert;
 export type LevelRow = typeof levels.$inferSelect;
@@ -213,3 +247,4 @@ export type TeacherRow = typeof teachers.$inferSelect;
 export type DailyActivityRow = typeof dailyActivities.$inferSelect;
 export type PaymentRow = typeof payments.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
+export type AnnouncementRow = typeof announcements.$inferSelect;

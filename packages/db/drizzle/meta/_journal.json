@@ -8,6 +8,13 @@
       "when": 1787486320240,
       "tag": "0000_wandering_big_bertha",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787514687697,
+      "tag": "0001_sleepy_namorita",
+      "breakpoints": true
     }
   ]
 }

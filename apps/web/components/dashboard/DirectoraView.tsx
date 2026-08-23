@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type {
+  Announcement,
   Child,
   DashboardSummary,
   Level,
@@ -11,6 +12,8 @@ import type {
   User,
 } from '@kidcare/types';
 import {
+  ANNOUNCEMENT_AUDIENCES,
+  ANNOUNCEMENT_AUDIENCE_LABELS,
   PAYMENT_METHODS,
   ROLES,
   ROLE_LABELS,
@@ -50,7 +53,8 @@ type TabId =
   | 'niveles'
   | 'profesoras'
   | 'pagos'
-  | 'cuentas';
+  | 'cuentas'
+  | 'comunicados';
 
 const TABS = [
   { id: 'alumnos', label: '👶 Alumnos' },
@@ -59,6 +63,7 @@ const TABS = [
   { id: 'profesoras', label: '👩‍🏫 Profesoras' },
   { id: 'pagos', label: '💳 Pagos' },
   { id: 'cuentas', label: '🔑 Cuentas' },
+  { id: 'comunicados', label: '📢 Comunicados' },
 ] as const satisfies ReadonlyArray<{ id: TabId; label: string }>;
 
 /** Estado de catalogos que comparten casi todos los formularios del panel. */
@@ -68,6 +73,7 @@ interface Catalog {
   teachers: Teacher[];
   users: User[];
   payments: Payment[];
+  announcements: Announcement[];
 }
 
 const EMPTY_CATALOG: Catalog = {
@@ -76,6 +82,7 @@ const EMPTY_CATALOG: Catalog = {
   teachers: [],
   users: [],
   payments: [],
+  announcements: [],
 };
 
 export function DirectoraView({
@@ -94,14 +101,16 @@ export function DirectoraView({
   const loadCatalog = useCallback(async () => {
     try {
       setError(null);
-      const [levels, rooms, teachers, users, payments] = await Promise.all([
-        apiGet<Level[]>('/levels'),
-        apiGet<Room[]>('/rooms'),
-        apiGet<Teacher[]>('/teachers'),
-        apiGet<User[]>('/users'),
-        apiGet<Payment[]>('/payments'),
-      ]);
-      setCatalog({ levels, rooms, teachers, users, payments });
+      const [levels, rooms, teachers, users, payments, announcements] =
+        await Promise.all([
+          apiGet<Level[]>('/levels'),
+          apiGet<Room[]>('/rooms'),
+          apiGet<Teacher[]>('/teachers'),
+          apiGet<User[]>('/users'),
+          apiGet<Payment[]>('/payments'),
+          apiGet<Announcement[]>('/announcements'),
+        ]);
+      setCatalog({ levels, rooms, teachers, users, payments, announcements });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cargando los datos');
     } finally {
@@ -399,6 +408,48 @@ export function DirectoraView({
                   </Badge>
                 </Card>
               ))}
+            </div>
+          </>
+        )}
+
+        {tab === 'comunicados' && (
+          <>
+            <SectionTitle emoji="📢">Comunicados</SectionTitle>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <AnnouncementForm
+                rooms={catalog.rooms}
+                children={data.children}
+                onDone={refreshAll}
+              />
+              <div>
+                <h3 className="mb-3 font-bold text-ink">
+                  Enviados ({catalog.announcements.length})
+                </h3>
+                {catalog.announcements.length === 0 ? (
+                  <EmptyState
+                    emoji="📢"
+                    title="Todavía no se ha enviado ningún comunicado"
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {catalog.announcements.map((a) => (
+                      <Card key={a.id}>
+                        <p className="font-bold text-ink">{a.title}</p>
+                        <p className="text-sm text-ink/60">{a.message}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge tone="bg-secondary/30 text-ink">
+                            {ANNOUNCEMENT_AUDIENCE_LABELS[a.audience]}
+                          </Badge>
+                          <Badge>{a.recipientCount} destinatarios</Badge>
+                          <span className="text-xs text-ink/40">
+                            {formatDate(a.createdAt)}
+                          </span>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -988,6 +1039,107 @@ function UserForm({ onDone }: { onDone: () => Promise<void> }) {
       <ErrorText>{error}</ErrorText>
       <Button type="submit" loading={busy} className="w-full">
         Crear cuenta
+      </Button>
+    </form>
+  );
+}
+
+function AnnouncementForm({
+  rooms,
+  children,
+  onDone,
+}: {
+  rooms: Room[];
+  children: Child[];
+  onDone: () => Promise<void>;
+}) {
+  const { error, busy, submit } = useFormSubmit(onDone);
+  const [audience, setAudience] = useState<'todos' | 'sala' | 'padre'>('todos');
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const f = new FormData(form);
+        const base = { title: f.get('title'), message: f.get('message') };
+        void submit(async () => {
+          if (audience === 'todos') {
+            await apiPost('/announcements', { audience, ...base });
+          } else if (audience === 'sala') {
+            await apiPost('/announcements', {
+              audience,
+              ...base,
+              roomId: f.get('roomId'),
+            });
+          } else {
+            await apiPost('/announcements', {
+              audience,
+              ...base,
+              childId: f.get('childId'),
+            });
+          }
+          form.reset();
+        });
+      }}
+    >
+      <Field label="Destinatario">
+        <Select
+          value={audience}
+          onChange={(e) => setAudience(e.target.value as typeof audience)}
+        >
+          {ANNOUNCEMENT_AUDIENCES.map((a) => (
+            <option key={a} value={a}>
+              {ANNOUNCEMENT_AUDIENCE_LABELS[a]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      {audience === 'sala' && (
+        <Field label="Sala">
+          <Select name="roomId" required defaultValue="">
+            <option value="" disabled>
+              Elige una sala
+            </option>
+            {rooms.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+
+      {audience === 'padre' && (
+        <Field label="Alumno">
+          <Select name="childId" required defaultValue="">
+            <option value="" disabled>
+              Elige un alumno
+            </option>
+            {children.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+
+      <Field label="Título">
+        <Input name="title" required placeholder="Día de la Madre 🌸" />
+      </Field>
+      <Field label="Mensaje">
+        <Textarea
+          name="message"
+          required
+          placeholder="Celebración el próximo viernes a las 10:00…"
+        />
+      </Field>
+      <ErrorText>{error}</ErrorText>
+      <Button type="submit" loading={busy} className="w-full">
+        📢 Enviar comunicado
       </Button>
     </form>
   );

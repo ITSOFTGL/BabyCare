@@ -10,6 +10,7 @@ const TYPE_EMOJI: Record<NotificationType, string> = {
   pago: '💳',
   agenda: '📝',
   alerta: '⚠️',
+  comunicado: '📢',
 };
 
 function timeAgo(iso: string): string {

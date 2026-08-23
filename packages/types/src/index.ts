@@ -31,8 +31,23 @@ export const PAYMENT_METHODS = [
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-export const NOTIFICATION_TYPES = ['info', 'pago', 'agenda', 'alerta'] as const;
+export const NOTIFICATION_TYPES = [
+  'info',
+  'pago',
+  'agenda',
+  'alerta',
+  'comunicado',
+] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export const ANNOUNCEMENT_AUDIENCES = ['todos', 'sala', 'padre'] as const;
+export type AnnouncementAudience = (typeof ANNOUNCEMENT_AUDIENCES)[number];
+
+export const ANNOUNCEMENT_AUDIENCE_LABELS: Record<AnnouncementAudience, string> = {
+  todos: 'Todos los padres',
+  sala: 'Una sala',
+  padre: 'Un alumno puntual',
+};
 
 /** Etiquetas en castellano para mostrar en la UI. */
 export const ROLE_LABELS: Record<Role, string> = {
@@ -170,6 +185,18 @@ export interface Notification {
   type: NotificationType;
   read: boolean;
   data: unknown;
+  createdAt: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  audience: AnnouncementAudience;
+  roomId: string | null;
+  childId: string | null;
+  createdBy: string | null;
+  recipientCount: number;
   createdAt: string;
 }
 

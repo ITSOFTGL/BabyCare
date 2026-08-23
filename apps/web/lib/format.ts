@@ -1,4 +1,12 @@
-/** Colores de acento rotativos para distinguir salas y niveles entre si. */
+/**
+ * Colores de acento rotativos para distinguir salas y niveles entre si.
+ *
+ * Son los UNICOS lugares del sistema donde se usan accent-pink/green/blue/
+ * purple: nunca para transmitir un estado (pagado/pendiente, alergia,
+ * error...), eso se resuelve con primary/secondary/ink. Estados y acentos no
+ * se mezclan, o dejan de servir para diferenciar salas y niveles a simple
+ * vista.
+ */
 export const ACCENTS = [
   'bg-accent-pink',
   'bg-accent-green',
@@ -6,12 +14,29 @@ export const ACCENTS = [
   'bg-accent-purple',
 ] as const;
 
-/** Elige siempre el mismo acento para el mismo id (estable entre recargas). */
-export function accentFor(key: string | null | undefined): string {
-  if (!key) return 'bg-primary';
+const ACCENT_BADGES = [
+  'bg-accent-pink/20 text-ink',
+  'bg-accent-green/20 text-ink',
+  'bg-accent-blue/20 text-ink',
+  'bg-accent-purple/20 text-ink',
+] as const;
+
+function accentIndex(key: string): number {
   let hash = 0;
   for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-  return ACCENTS[Math.abs(hash) % ACCENTS.length]!;
+  return Math.abs(hash) % ACCENTS.length;
+}
+
+/** Elige siempre el mismo acento (bg solido) para el mismo id de sala/nivel. */
+export function accentFor(key: string | null | undefined): string {
+  if (!key) return 'bg-primary';
+  return ACCENTS[accentIndex(key)]!;
+}
+
+/** Version en "chip" (fondo suave) del mismo acento, para badges de texto. */
+export function accentBadgeFor(key: string | null | undefined): string {
+  if (!key) return 'bg-secondary/25 text-ink';
+  return ACCENT_BADGES[accentIndex(key)]!;
 }
 
 export function formatMoney(value: string | number | null | undefined): string {

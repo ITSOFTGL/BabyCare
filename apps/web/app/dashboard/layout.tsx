@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { TENANT_NAME } from '@/lib/api';
 import { initials } from '@/lib/format';
 import { Button, Spinner } from '@/components/ui';
+import { NotificationBell } from '@/components/NotificationBell';
 
 /**
  * Guardia de la zona privada: sin token valido nadie ve el panel, se redirige
@@ -31,7 +32,7 @@ export default function DashboardLayout({
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 border-b border-secondary/25 bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-xl shadow-lift">
+          <div className="flex h-11 w-11 shrink-0 animate-float items-center justify-center rounded-2xl bg-primary text-xl shadow-lift">
             🧸
           </div>
           <div className="min-w-0 flex-1">
@@ -55,6 +56,8 @@ export default function DashboardLayout({
           >
             {initials(user.name)}
           </div>
+
+          <NotificationBell />
 
           <Button variant="ghost" size="sm" onClick={logout}>
             Salir

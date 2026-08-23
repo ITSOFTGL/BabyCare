@@ -7,6 +7,7 @@ import {
   TURN_LABELS,
 } from '@kidcare/types';
 import {
+  accentBadgeFor,
   accentFor,
   formatAge,
   formatDate,
@@ -34,13 +35,13 @@ export function ParentView({ data }: { data: DashboardSummary }) {
           emoji="📝"
           label="Anotaciones hoy"
           value={data.totals.activitiesToday}
-          tone="bg-accent-green"
+          tone="bg-secondary"
         />
         <StatCard
           emoji="💳"
           label="Cuotas pendientes"
           value={pending.length}
-          tone="bg-accent-pink"
+          tone="bg-primary-dark"
         />
       </section>
 
@@ -76,12 +77,12 @@ export function ParentView({ data }: { data: DashboardSummary }) {
               <div className="flex flex-wrap gap-2">
                 <Badge>{TURN_LABELS[child.turn]}</Badge>
                 {child.level && (
-                  <Badge tone="bg-accent-blue/20 text-ink">
+                  <Badge tone={accentBadgeFor(child.levelId)}>
                     {child.level.name}
                   </Badge>
                 )}
                 {child.allergies && (
-                  <Badge tone="bg-accent-pink/20 text-accent-pink">
+                  <Badge tone="bg-primary/10 text-primary-dark">
                     ⚠️ {child.allergies}
                   </Badge>
                 )}
@@ -107,7 +108,10 @@ export function ParentView({ data }: { data: DashboardSummary }) {
         ) : (
           <div className="space-y-2">
             {data.recentActivities.map((activity) => (
-              <Card key={activity.id} className="flex items-start gap-3 py-4">
+              <Card
+                key={activity.id}
+                className="flex items-start gap-3 border-l-4 border-primary/30 py-4"
+              >
                 <span className="text-2xl leading-none">
                   {ACTIVITY_EMOJI[activity.type]}
                 </span>
@@ -152,11 +156,11 @@ export function ParentView({ data }: { data: DashboardSummary }) {
                   </p>
                 </div>
                 {payment.status === 'pagado' ? (
-                  <Badge tone="bg-accent-green/25 text-ink">
+                  <Badge tone="bg-primary/10 text-primary-dark">
                     ✅ Pagado {formatDate(payment.paidAt)}
                   </Badge>
                 ) : (
-                  <Badge tone="bg-accent-pink/20 text-accent-pink">
+                  <Badge tone="bg-secondary/30 text-ink">
                     ⏳ Pendiente
                   </Badge>
                 )}

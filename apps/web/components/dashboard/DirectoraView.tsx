@@ -19,6 +19,7 @@ import {
 } from '@kidcare/types';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api';
 import {
+  accentBadgeFor,
   accentFor,
   currentMonth,
   formatAge,
@@ -136,13 +137,13 @@ export function DirectoraView({
           emoji="👩‍🏫"
           label="Profesoras"
           value={data.totals.teachers}
-          tone="bg-accent-purple"
+          tone="bg-ink"
         />
         <StatCard
           emoji="🎨"
           label="Salas"
           value={data.totals.rooms}
-          tone="bg-accent-blue"
+          tone="bg-secondary"
         />
         <StatCard
           emoji="💳"
@@ -150,7 +151,7 @@ export function DirectoraView({
           value={
             catalog.payments.filter((p) => p.status === 'pendiente').length
           }
-          tone="bg-accent-pink"
+          tone="bg-primary-dark"
         />
       </section>
 
@@ -296,15 +297,15 @@ export function DirectoraView({
                       {TURN_LABELS[teacher.turn]}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge tone="bg-accent-blue/20 text-ink">
+                      <Badge tone={accentBadgeFor(teacher.roomId)}>
                         {teacher.room?.name ?? 'Sin sala'}
                       </Badge>
                       {teacher.userId ? (
-                        <Badge tone="bg-accent-green/25 text-ink">
-                          Con acceso
+                        <Badge tone="bg-primary/10 text-primary-dark">
+                          ✅ Con acceso
                         </Badge>
                       ) : (
-                        <Badge tone="bg-ink/8 text-ink/60">Sin cuenta</Badge>
+                        <Badge tone="bg-ink/8 text-ink/50">Sin cuenta</Badge>
                       )}
                     </div>
                   </Card>
@@ -345,13 +346,13 @@ export function DirectoraView({
                       </p>
                     </div>
                     {payment.status === 'pagado' ? (
-                      <Badge tone="bg-accent-green/25 text-ink">
-                        Pagado {formatDate(payment.paidAt)}
+                      <Badge tone="bg-primary/10 text-primary-dark">
+                        ✅ Pagado {formatDate(payment.paidAt)}
                       </Badge>
                     ) : (
                       <>
-                        <Badge tone="bg-accent-pink/20 text-accent-pink">
-                          Pendiente
+                        <Badge tone="bg-secondary/30 text-ink">
+                          ⏳ Pendiente
                         </Badge>
                         <Button
                           size="sm"
@@ -500,10 +501,10 @@ function ChildCard({
       <div className="flex flex-wrap gap-2">
         <Badge>{TURN_LABELS[child.turn]}</Badge>
         {child.level && (
-          <Badge tone="bg-accent-blue/20 text-ink">{child.level.name}</Badge>
+          <Badge tone={accentBadgeFor(child.levelId)}>{child.level.name}</Badge>
         )}
         {child.allergies && (
-          <Badge tone="bg-accent-pink/20 text-accent-pink">
+          <Badge tone="bg-primary/10 text-primary-dark">
             ⚠️ {child.allergies}
           </Badge>
         )}

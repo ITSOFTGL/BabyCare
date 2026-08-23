@@ -28,7 +28,9 @@ export function Button({
       'bg-primary text-white shadow-lift hover:bg-primary-dark active:scale-[0.98]',
     soft: 'bg-secondary/25 text-ink hover:bg-secondary/40 active:scale-[0.98]',
     ghost: 'bg-transparent text-ink/70 hover:bg-ink/5',
-    danger: 'bg-accent-pink/15 text-accent-pink hover:bg-accent-pink/25',
+    // "Peligro" se resuelve con primary-dark + el peso del texto, no con un
+    // acento: los acentos son solo para diferenciar salas/niveles.
+    danger: 'bg-primary-dark/10 text-primary-dark hover:bg-primary-dark/20',
   }[variant];
 
   const sizing = size === 'sm' ? 'px-3.5 py-2 text-sm' : 'px-5 py-3 text-base';
@@ -101,17 +103,24 @@ export function StatCard({
   tone?: string;
 }) {
   return (
-    <div className="rounded-card bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift">
+    <div className="group relative overflow-hidden rounded-card bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift">
+      {/* Eco del emoji de fondo, muy tenue: un guino a las cards del panel de referencia. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -bottom-3 -right-2 select-none text-6xl opacity-[0.06] transition group-hover:opacity-[0.1]"
+      >
+        {emoji}
+      </span>
       <div
         className={cx(
-          'mb-3 flex h-11 w-11 items-center justify-center rounded-2xl text-xl',
+          'relative mb-3 flex h-11 w-11 items-center justify-center rounded-2xl text-xl shadow-sm',
           tone,
         )}
       >
         {emoji}
       </div>
-      <p className="text-2xl font-bold leading-none text-ink">{value}</p>
-      <p className="mt-1 text-sm font-medium text-ink/55">{label}</p>
+      <p className="relative text-2xl font-bold leading-none text-ink">{value}</p>
+      <p className="relative mt-1 text-sm font-medium text-ink/55">{label}</p>
     </div>
   );
 }
@@ -209,7 +218,7 @@ export function Select({
 export function ErrorText({ children }: { children?: React.ReactNode }) {
   if (!children) return null;
   return (
-    <p className="rounded-2xl bg-accent-pink/12 px-4 py-3 text-sm font-semibold text-accent-pink">
+    <p className="rounded-2xl bg-primary-dark/10 px-4 py-3 text-sm font-semibold text-primary-dark">
       {children}
     </p>
   );

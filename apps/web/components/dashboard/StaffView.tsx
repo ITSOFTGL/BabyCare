@@ -46,13 +46,13 @@ export function StaffView({
           emoji="📝"
           label="Anotaciones hoy"
           value={data.totals.activitiesToday}
-          tone="bg-accent-green"
+          tone="bg-secondary"
         />
         <StatCard
           emoji="🔔"
           label="Sin leer"
           value={data.unreadNotifications}
-          tone="bg-accent-purple"
+          tone="bg-ink"
         />
       </section>
 
@@ -88,12 +88,12 @@ export function StaffView({
                 {(child.allergies || child.medications) && (
                   <div className="flex flex-wrap gap-2">
                     {child.allergies && (
-                      <Badge tone="bg-accent-pink/20 text-accent-pink">
+                      <Badge tone="bg-primary/10 text-primary-dark">
                         ⚠️ {child.allergies}
                       </Badge>
                     )}
                     {child.medications && (
-                      <Badge tone="bg-accent-blue/20 text-ink">
+                      <Badge tone="bg-secondary/25 text-ink">
                         💊 {child.medications}
                       </Badge>
                     )}
@@ -120,7 +120,10 @@ export function StaffView({
         ) : (
           <div className="space-y-2">
             {data.recentActivities.map((activity) => (
-              <Card key={activity.id} className="flex items-center gap-3 py-3">
+              <Card
+                key={activity.id}
+                className="flex items-center gap-3 border-l-4 border-primary/30 py-3"
+              >
                 <span className="text-2xl">{ACTIVITY_EMOJI[activity.type]}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-ink">

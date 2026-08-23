@@ -51,10 +51,15 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'scale(0.96)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.35s ease-out both',
         pop: 'pop 0.2s ease-out both',
+        float: 'float 3s ease-in-out infinite',
       },
     },
   },

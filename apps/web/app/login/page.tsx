@@ -39,7 +39,7 @@ export default function LoginPage() {
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm animate-fade-up">
         <div className="mb-7 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-card bg-primary text-4xl shadow-lift">
+          <div className="mx-auto mb-4 flex h-20 w-20 animate-float items-center justify-center rounded-card bg-primary text-4xl shadow-lift">
             🧸
           </div>
           <h1 className="text-3xl font-bold text-primary">KidCare</h1>

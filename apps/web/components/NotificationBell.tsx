@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Notification, NotificationType } from '@kidcare/types';
 import { apiGet, apiPatch } from '@/lib/api';
+import {
+  disablePush,
+  enablePush,
+  getPushStatus,
+  type PushStatus,
+} from '@/lib/push';
 import { cx } from '@/components/ui';
 
 const TYPE_EMOJI: Record<NotificationType, string> = {
@@ -31,6 +37,9 @@ function timeAgo(iso: string): string {
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[] | null>(null);
+  const [pushStatus, setPushStatus] = useState<PushStatus | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   const unread = items?.filter((n) => !n.read).length ?? 0;
@@ -48,6 +57,24 @@ export function NotificationBell() {
     const id = setInterval(load, 60_000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    void getPushStatus().then(setPushStatus);
+  }, []);
+
+  async function togglePush() {
+    setPushError(null);
+    setPushBusy(true);
+    try {
+      if (pushStatus === 'subscribed') await disablePush();
+      else await enablePush();
+      setPushStatus(await getPushStatus());
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : 'No se pudo activar');
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -146,6 +173,37 @@ export function NotificationBell() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {pushStatus && pushStatus !== 'unsupported' && (
+            <div className="mt-1 border-t border-secondary/25 px-3 py-2.5">
+              <button
+                type="button"
+                onClick={togglePush}
+                disabled={pushBusy || pushStatus === 'denied'}
+                className="flex w-full items-center justify-between text-xs font-semibold text-ink/60 hover:text-ink disabled:opacity-50"
+              >
+                <span>
+                  {pushStatus === 'subscribed'
+                    ? '✅ Notificaciones push activadas'
+                    : pushStatus === 'denied'
+                      ? '🔕 Bloqueaste los permisos de notificación'
+                      : '🔔 Activar notificaciones push'}
+                </span>
+                {pushStatus !== 'denied' && (
+                  <span className="text-primary-dark">
+                    {pushBusy
+                      ? '…'
+                      : pushStatus === 'subscribed'
+                        ? 'Desactivar'
+                        : 'Activar'}
+                  </span>
+                )}
+              </button>
+              {pushError && (
+                <p className="mt-1 text-xs text-primary-dark">{pushError}</p>
+              )}
+            </div>
           )}
         </div>
       )}

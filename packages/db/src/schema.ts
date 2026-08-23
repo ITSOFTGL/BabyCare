@@ -237,6 +237,24 @@ export const announcements = pgTable('announcements', {
     .defaultNow(),
 });
 
+/**
+ * Suscripciones Web Push (protocolo estandar del navegador, sin Firebase). Un
+ * usuario puede tener varias filas: una por navegador/dispositivo en el que
+ * activo las notificaciones.
+ */
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type NewUserRow = typeof users.$inferInsert;
 export type LevelRow = typeof levels.$inferSelect;
@@ -248,3 +266,4 @@ export type DailyActivityRow = typeof dailyActivities.$inferSelect;
 export type PaymentRow = typeof payments.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
 export type AnnouncementRow = typeof announcements.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

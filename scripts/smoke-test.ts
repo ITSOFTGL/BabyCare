@@ -293,6 +293,37 @@ check(
   'la profesora NO puede enviar comunicados (403)',
 );
 
+// --- 8. Web Push (suscripcion) ------------------------------------------------
+console.log('\n8. El padre activa notificaciones push');
+const noTokenVapid = await call('/push/vapid-public-key');
+check(noTokenVapid.status === 401, 'sin token, /push/vapid-public-key responde 401');
+
+const vapid = await call('/push/vapid-public-key', { token: parentToken });
+check(
+  vapid.status === 200 && typeof vapid.data?.publicKey === 'string',
+  'GET /push/vapid-public-key devuelve la clave pública configurada',
+  vapid.data,
+);
+
+// Endpoint/keys de mentira: en Bun no hay PushManager real, pero sirve para
+// probar que la API guarda y borra suscripciones correctamente.
+const fakeEndpoint = `https://fcm.googleapis.com/fp/${stamp}`;
+const subscribe = await call('/push/subscribe', {
+  token: parentToken,
+  method: 'POST',
+  body: {
+    endpoint: fakeEndpoint,
+    keys: { p256dh: 'clave-p256dh-de-prueba', auth: 'clave-auth-de-prueba' },
+  },
+});
+check(subscribe.status === 201, 'POST /push/subscribe guarda la suscripción', subscribe.data);
+
+const unsubscribe = await call(
+  `/push/subscribe?endpoint=${encodeURIComponent(fakeEndpoint)}`,
+  { token: parentToken, method: 'DELETE' },
+);
+check(unsubscribe.status === 200, 'DELETE /push/subscribe la borra');
+
 // --- Resultado --------------------------------------------------------------
 console.log(
   failures === 0

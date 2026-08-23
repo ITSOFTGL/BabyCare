@@ -35,6 +35,11 @@ services:
       TENANT_NAME: ${TENANT_NAME:-Guarderia Demo}
       PORT: '3001'
       CORS_ORIGINS: '*'
+      # Claves de desarrollo listas para usar; genera las tuyas en produccion
+      # con `bunx web-push generate-vapid-keys`.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-BH-VmTe1fJ7WTi1etP_YSbvYtmRYE19miSs0fjZ4n9N96hYWYX58nJKclvKnVKjlxMgGaTUawVUf90gFZVF3maE}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-s2lWTT8YCGqGRKAIoYLM6K-DNJeIgA03ptyDpQQK5Ls}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@kidcare.test}
     ports:
       - '${API_PORT:-3001}:3001'
     depends_on:
@@ -73,6 +78,7 @@ services:
       - ./apps/web/app:/app/apps/web/app
       - ./apps/web/components:/app/apps/web/components
       - ./apps/web/lib:/app/apps/web/lib
+      - ./apps/web/public:/app/apps/web/public
       - ./packages/types/src:/app/packages/types/src
 
 volumes:

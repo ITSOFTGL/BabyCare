@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-ink font-sans antialiased;
+  }
+
+  /* Sin bordes duros: el foco se marca con un halo suave del color primario. */
+  *:focus-visible {
+    @apply outline-none ring-4 ring-primary/25 ring-offset-0;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card bg-white p-5 shadow-soft;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border-0 bg-background px-4 py-3 text-ink
+      placeholder:text-ink/35 transition focus:ring-4 focus:ring-primary/25;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-ink/70;
+  }
+}
+
+/* Scrollbar discreta, en tono crema, para no romper la estetica calida. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.3);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

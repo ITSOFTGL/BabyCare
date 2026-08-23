@@ -1,0 +1,30 @@
+{
+  "name": "kidcare-erp",
+  "private": true,
+  "version": "1.0.0",
+  "description": "KidCare - Sistema de gestion para guarderias infantiles",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "docker compose -f docker-compose.dev.yml up",
+    "dev:down": "docker compose -f docker-compose.dev.yml down",
+    "dev:build": "docker compose -f docker-compose.dev.yml build",
+    "dev:api": "bun run --cwd apps/api dev",
+    "dev:web": "bun run --cwd apps/web dev",
+    "db:generate": "bun run --cwd packages/db generate",
+    "db:migrate": "bun run --cwd packages/db migrate",
+    "db:push": "bun run --cwd packages/db push",
+    "db:seed": "bun run --cwd packages/db seed",
+    "db:studio": "bun run --cwd packages/db studio",
+    "smoke": "bun run scripts/smoke-test.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}

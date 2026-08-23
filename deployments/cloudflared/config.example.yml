@@ -1,0 +1,26 @@
+# Ejemplo de configuracion del tunel de Cloudflare.
+# Copia a config.yml, pon tu tunnel id y monta el fichero en el contenedor.
+#
+# Cada guarderia = un subdominio. Las reglas van de mas especifica a menos:
+# /api/* entra al backend de ese cliente y el resto al frontend.
+
+tunnel: 00000000-0000-0000-0000-000000000000
+credentials-file: /etc/cloudflared/00000000-0000-0000-0000-000000000000.json
+
+ingress:
+  # --- Guarderia Soleil ----------------------------------------------------
+  - hostname: soleil.tudominio.com
+    path: ^/api/.*
+    service: http://kidcare-soleil-backend:3001
+  - hostname: soleil.tudominio.com
+    service: http://kidcare-soleil-frontend:3000
+
+  # --- Guarderia Arcoiris --------------------------------------------------
+  - hostname: arcoiris.tudominio.com
+    path: ^/api/.*
+    service: http://kidcare-arcoiris-backend:3001
+  - hostname: arcoiris.tudominio.com
+    service: http://kidcare-arcoiris-frontend:3000
+
+  # Regla final obligatoria.
+  - service: http_status:404

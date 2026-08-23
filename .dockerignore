@@ -1,0 +1,14 @@
+# El contexto de build es la raiz del monorepo: fuera todo lo que la imagen
+# reconstruye por su cuenta o no necesita.
+node_modules
+**/node_modules
+.next
+**/.next
+.git
+.github
+deployments
+apps/mobile
+*.md
+!packages/db/drizzle
+.env
+*.log

@@ -1,0 +1,23 @@
+# Imagen de desarrollo del frontend: `next dev` con recarga en caliente sobre
+# el codigo montado desde el host.
+FROM oven/bun:1
+
+WORKDIR /app
+
+COPY package.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/db/package.json packages/db/
+COPY packages/types/package.json packages/types/
+
+RUN bun install
+
+COPY tsconfig.base.json ./
+COPY packages packages
+COPY apps/web apps/web
+
+WORKDIR /app/apps/web
+
+EXPOSE 3000
+
+CMD ["bun", "run", "dev"]

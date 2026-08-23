@@ -1,0 +1,19 @@
+# Tunel de Cloudflare compartido por todas las guarderias.
+# Vive en la misma red que los backends y frontends para poder enrutarles.
+name: kidcare-cloudflared
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: kidcare-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      # Debe contener config.yml y el JSON de credenciales del tunel.
+      - ./:/etc/cloudflared:ro
+    networks:
+      - kidcare_net
+
+networks:
+  kidcare_net:
+    external: true

@@ -1,0 +1,37 @@
+# Plantilla de una instancia de cliente.
+#
+# Para dar de alta una guarderia nueva:
+#   cp -r deployments/_template deployments/<cliente>
+#   cd deployments/<cliente> && cp .env.example .env   # y rellenarlo
+#   docker compose up -d
+#
+# Cada cliente corre su propio backend y su propio frontend, y comparte solo el
+# servidor Postgres (con base de datos propia) y el tunel de Cloudflare.
+name: kidcare-${TENANT_SLUG}
+
+services:
+  backend:
+    image: kidcare-backend:latest
+    container_name: kidcare-${TENANT_SLUG}-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://kidcare:${POSTGRES_ADMIN_PASSWORD}@postgres-shared:5432/${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      TENANT_NAME: ${TENANT_NAME}
+      PORT: '3001'
+      CORS_ORIGINS: https://${SUBDOMAIN}.tudominio.com
+    networks: [kidcare_net]
+
+  frontend:
+    image: kidcare-frontend:latest
+    container_name: kidcare-${TENANT_SLUG}-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: https://${SUBDOMAIN}.tudominio.com/api
+      NEXT_PUBLIC_TENANT_NAME: ${TENANT_NAME}
+    depends_on: [backend]
+    networks: [kidcare_net]
+
+networks:
+  kidcare_net:
+    external: true

@@ -1,0 +1,75 @@
+# Entorno de desarrollo local: Postgres + API (bun --hot) + web (next dev).
+# Produccion NO usa este fichero, usa deployments/postgres + deployments/_template.
+name: kidcare-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kidcare-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kidcare}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kidcare_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-kidcare_dev}
+    ports:
+      # 5433 en el host para no chocar con un Postgres instalado localmente.
+      - '${POSTGRES_PORT:-5433}:5432'
+    volumes:
+      - kidcare_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-kidcare} -d ${POSTGRES_DB:-kidcare_dev}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: kidcare-dev-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-kidcare}:${POSTGRES_PASSWORD:-kidcare_dev}@postgres:5432/${POSTGRES_DB:-kidcare_dev}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-cambiar-en-produccion-1234567890}
+      TENANT_NAME: ${TENANT_NAME:-Guarderia Demo}
+      PORT: '3001'
+      CORS_ORIGINS: '*'
+    ports:
+      - '${API_PORT:-3001}:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Solo el codigo fuente: asi el node_modules del contenedor no se pisa
+      # con el del host (que en Windows ni siquiera existe).
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages:/app/packages
+    command:
+      - sh
+      - -c
+      - 'bun packages/db/src/migrate.ts && bun --hot apps/api/src/index.ts'
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    container_name: kidcare-dev-web
+    restart: unless-stopped
+    environment:
+      # La resuelve el navegador del host, por eso es localhost y no `api`.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+      NEXT_PUBLIC_TENANT_NAME: ${TENANT_NAME:-Guarderia Demo}
+      WATCHPACK_POLLING: 'true'
+    ports:
+      - '${WEB_PORT:-3000}:3000'
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web/app:/app/apps/web/app
+      - ./apps/web/components:/app/apps/web/components
+      - ./apps/web/lib:/app/apps/web/lib
+      - ./packages/types/src:/app/packages/types/src
+
+volumes:
+  kidcare_dev_pgdata:

@@ -141,3 +141,18 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# --- KidCare ---
+.env
+!.env.example
+!deployments/**/.env.example
+.next/
+next-env.d.ts
+bun.lockb
+deployments/*/
+!deployments/_template/
+!deployments/postgres/
+!deployments/cloudflared/
+deployments/cloudflared/config.yml
+deployments/cloudflared/*.json
+deployments/postgres/backups/

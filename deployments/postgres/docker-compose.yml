@@ -1,0 +1,40 @@
+# Servidor Postgres COMPARTIDO por todas las guarderias de la VPS.
+#
+# Se levanta una sola vez. Cada guarderia cliente tiene su propia base de datos
+# dentro de esta instancia; el aislamiento entre clientes es a nivel de base de
+# datos completa, no de fila.
+#
+#   docker network create kidcare_net      # solo la primera vez
+#   docker compose up -d
+#
+# Ojo: no se publica ningun puerto al host. Solo los contenedores que esten en
+# la red kidcare_net pueden hablar con Postgres.
+name: kidcare-postgres
+
+services:
+  postgres-shared:
+    image: postgres:16-alpine
+    container_name: postgres-shared
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kidcare
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?define POSTGRES_ADMIN_PASSWORD en .env}
+      # Base administrativa; las de cada cliente se crean aparte.
+      POSTGRES_DB: kidcare_admin
+    volumes:
+      - kidcare_pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kidcare']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kidcare_net
+
+volumes:
+  kidcare_pgdata:
+
+networks:
+  kidcare_net:
+    external: true

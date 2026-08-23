@@ -25,8 +25,16 @@ import {
 
 const listQuerySchema = z.object({
   childId: uuidSchema.optional(),
-  /** Filtra por dia concreto en formato AAAA-MM-DD (hora del servidor). */
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /**
+   * Instantes UTC que delimitan el rango a mostrar, en formato ISO
+   * (`new Date().toISOString()`). Los calcula el CLIENTE a partir de su
+   * propia zona horaria (p. ej. "medianoche a medianoche de hoy en mi
+   * huso"), no el servidor: un contenedor Docker corre en UTC por defecto,
+   * asi que interpretar aqui una fecha suelta como "AAAA-MM-DDT00:00:00"
+   * daria el dia equivocado para cualquier familia fuera de UTC.
+   */
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 
@@ -63,12 +71,8 @@ activityRoutes.get('/', async (c) => {
         : undefined,
   ];
 
-  if (query.date) {
-    filters.push(
-      gte(dailyActivities.recordedAt, new Date(`${query.date}T00:00:00`)),
-      lte(dailyActivities.recordedAt, new Date(`${query.date}T23:59:59.999`)),
-    );
-  }
+  if (query.from) filters.push(gte(dailyActivities.recordedAt, new Date(query.from)));
+  if (query.to) filters.push(lte(dailyActivities.recordedAt, new Date(query.to)));
 
   const active = filters.filter(Boolean) as never[];
 

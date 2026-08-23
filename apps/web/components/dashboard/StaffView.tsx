@@ -1,15 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import type { Child, DashboardSummary } from '@kidcare/types';
+import { useCallback, useEffect, useState } from 'react';
+import type { Child, DailyActivity, DashboardSummary } from '@kidcare/types';
 import {
   ACTIVITY_EMOJI,
   ACTIVITY_LABELS,
   ACTIVITY_TYPES,
   TURN_LABELS,
 } from '@kidcare/types';
-import { apiPost } from '@/lib/api';
-import { accentFor, formatAge, formatDateTime } from '@/lib/format';
+import { apiGet, apiPost } from '@/lib/api';
+import {
+  accentFor,
+  dayBoundsLocal,
+  formatAge,
+  formatDateTime,
+  todayLocalInputValue,
+} from '@/lib/format';
 import {
   Badge,
   Button,
@@ -17,9 +23,11 @@ import {
   EmptyState,
   ErrorText,
   Field,
+  Input,
   Modal,
   SectionTitle,
   Select,
+  Spinner,
   StatCard,
   Textarea,
   cx,
@@ -37,6 +45,9 @@ export function StaffView({
   onRefresh: () => Promise<void>;
 }) {
   const [target, setTarget] = useState<Child | null>(null);
+  // Cambia cada vez que se guarda una anotacion nueva, para que la agenda
+  // por dia se refresque sin perder el dia que este viendo la profesora.
+  const [agendaRefreshToken, setAgendaRefreshToken] = useState(0);
 
   return (
     <div className="space-y-6">
@@ -113,34 +124,7 @@ export function StaffView({
         )}
       </section>
 
-      <section>
-        <SectionTitle emoji="🕒">Últimas anotaciones</SectionTitle>
-        {data.recentActivities.length === 0 ? (
-          <EmptyState emoji="📝" title="Todavía no hay anotaciones" />
-        ) : (
-          <div className="space-y-2">
-            {data.recentActivities.map((activity) => (
-              <Card
-                key={activity.id}
-                className="flex items-center gap-3 border-l-4 border-primary/30 py-3"
-              >
-                <span className="text-2xl">{ACTIVITY_EMOJI[activity.type]}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-ink">
-                    {activity.childName} · {ACTIVITY_LABELS[activity.type]}
-                  </p>
-                  <p className="truncate text-sm text-ink/50">
-                    {activity.description || 'Sin detalle'}
-                  </p>
-                </div>
-                <span className="shrink-0 text-xs text-ink/40">
-                  {formatDateTime(activity.recordedAt)}
-                </span>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+      <DailyAgendaSection refreshSignal={agendaRefreshToken} />
 
       <Modal
         open={target !== null}
@@ -153,12 +137,92 @@ export function StaffView({
             child={target}
             onDone={async () => {
               setTarget(null);
+              setAgendaRefreshToken((n) => n + 1);
               await onRefresh();
             }}
           />
         )}
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Agenda filtrada por dia, calculando el rango [medianoche, medianoche) en
+ * la zona horaria del NAVEGADOR (dayBoundsLocal), no la del contenedor de la
+ * API (que corre en UTC). Antes esto se resolvia mal para cualquier familia
+ * fuera de UTC: "hoy" en el servidor no era "hoy" para ellos.
+ */
+function DailyAgendaSection({ refreshSignal }: { refreshSignal: number }) {
+  const [date, setDate] = useState(todayLocalInputValue());
+  const [activities, setActivities] = useState<DailyActivity[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setError(null);
+      setActivities(null);
+      const { from, to } = dayBoundsLocal(date);
+      const rows = await apiGet<DailyActivity[]>(
+        `/activities?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      );
+      setActivities(rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la agenda');
+    }
+  }, [date, refreshSignal]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <section>
+      <SectionTitle
+        emoji="🕒"
+        action={
+          <Input
+            type="date"
+            value={date}
+            max={todayLocalInputValue()}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-auto"
+          />
+        }
+      >
+        Agenda del día
+      </SectionTitle>
+
+      <ErrorText>{error}</ErrorText>
+
+      {!activities ? (
+        <Spinner label="Cargando agenda…" />
+      ) : activities.length === 0 ? (
+        <EmptyState emoji="📝" title="No hay anotaciones ese día" />
+      ) : (
+        <div className="space-y-2">
+          {activities.map((activity) => (
+            <Card
+              key={activity.id}
+              className="flex items-center gap-3 border-l-4 border-primary/30 py-3"
+            >
+              <span className="text-2xl">{ACTIVITY_EMOJI[activity.type]}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-ink">
+                  {activity.childName} · {ACTIVITY_LABELS[activity.type]}
+                </p>
+                <p className="truncate text-sm text-ink/50">
+                  {activity.description || 'Sin detalle'}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs text-ink/40">
+                {formatDateTime(activity.recordedAt)}
+              </span>
+            </Card>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

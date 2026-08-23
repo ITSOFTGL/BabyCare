@@ -132,6 +132,9 @@ cabecera `Authorization: Bearer <token>`.
 | POST/PATCH/DELETE | `/payments` | directora                    |
 | PATCH  | `/payments/:id/pay`         | directora                    |
 | GET    | `/notifications`            | autenticado (solo las suyas) |
+| GET/POST | `/announcements`          | directora                    |
+| GET    | `/push/vapid-public-key`    | autenticado                  |
+| POST/DELETE | `/push/subscribe`      | autenticado                  |
 | GET    | `/dashboard`                | autenticado                  |
 
 **Visibilidad por rol** (`apps/api/src/lib/scope.ts`):
@@ -139,6 +142,34 @@ cabecera `Authorization: Bearer <token>`.
 - `directora` — toda la guardería.
 - `profesora` / `auxiliar` — solo los niños de la sala de su ficha de profesora.
 - `padre` — solo los niños con `parent_id` igual a su usuario.
+
+### Comunicados
+
+`POST /announcements` (solo directora) manda un aviso a **todos** los padres,
+a los de **una sala**, o al apoderado de **un alumno puntual**. La entrega
+in-app reutiliza la tabla `notifications` de siempre (una fila por
+destinatario, deduplicada por si un padre tiene varios hijos); `announcements`
+solo guarda el comunicado en sí para el historial (`GET /announcements`).
+
+### Web Push (sin Firebase)
+
+Protocolo estándar del navegador (VAPID), no un servicio de terceros.
+`notifyUser()` —el mismo punto por el que ya pasan agenda, pagos y
+comunicados— manda también un push tras guardar la notificación in-app, así
+que ninguna ruta existente tuvo que tocarse para esto.
+
+Sin `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` configuradas, la API funciona
+igual y solo desactiva el envío de push (log de aviso una sola vez al
+arrancar). Para generar tu propio par en producción:
+
+```bash
+bunx web-push generate-vapid-keys
+```
+
+Para probarlo en local: inicia sesión, abre la campana 🔔 y pulsa "Activar
+notificaciones push" (el navegador pide permiso). Después, cualquier evento
+que ya notifique in-app —una anotación de agenda, un pago, un comunicado—
+también llega como notificación nativa del sistema operativo.
 
 ---
 
@@ -148,7 +179,8 @@ cabecera `Authorization: Bearer <token>`.
 de base de datos completa, por eso no existe ninguna columna `tenant_id`.
 
 Tablas de v1: `users`, `levels`, `rooms`, `children`, `guardians`, `teachers`,
-`daily_activities`, `payments`, `notifications`.
+`daily_activities`, `payments`, `notifications`. De fase 2 (comunicados y Web
+Push): `announcements`, `push_subscriptions`.
 
 Tras modificar `packages/db/src/schema.ts`:
 
@@ -234,5 +266,8 @@ docker exec postgres-shared \
 y personas autorizadas, profesoras, agenda diaria, pagos manuales, dashboard por
 rol y notificaciones in-app.
 
-**v2 (no implementado):** chat por sala, comunicados masivos, notificaciones
-push, factura PDF automática, 2FA y app móvil.
+**v2 — implementado hasta ahora:** comunicados (a todos / por sala / a un
+alumno puntual) y notificaciones Web Push con VAPID.
+
+**v2 — todavía no implementado:** chat por sala, factura PDF automática, 2FA
+y app móvil.

@@ -21,10 +21,13 @@ app.use('*', logger());
 app.use(
   '*',
   cors({
-    origin: env.corsOrigins.includes('*') ? '*' : env.corsOrigins,
+    // La cookie de sesion httpOnly exige credentials:true, y los navegadores
+    // rechazan '*' junto con eso: hace falta listar origenes explicitos
+    // (ver env.corsOrigins / CORS_ORIGINS).
+    origin: env.corsOrigins,
     allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
-    credentials: false,
+    credentials: true,
   }),
 );
 

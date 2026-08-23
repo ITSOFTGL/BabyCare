@@ -247,6 +247,45 @@ check(forbiddenActivity.status === 403, 'el padre NO puede escribir en la agenda
 const forbiddenUsers = await call('/users', { token: parentToken });
 check(forbiddenUsers.status === 403, 'el padre NO puede listar cuentas (403)');
 
+// --- 7. Rate limiting en /auth/login -----------------------------------------
+console.log('\n7. Rate limiting en /auth/login');
+// Email desechable: nunca existe, asi que solo se prueba el limite por email
+// sin arriesgar bloquear la cuenta real de la directora.
+const rateLimitEmail = `ratelimit-${stamp}@kidcare.test`;
+let lastLoginStatus = 0;
+for (let i = 0; i < 6; i++) {
+  const attempt = await call('/auth/login', {
+    method: 'POST',
+    body: { email: rateLimitEmail, password: 'password-incorrecta' },
+  });
+  lastLoginStatus = attempt.status;
+}
+check(
+  lastLoginStatus === 429,
+  'tras 6 intentos fallidos con el mismo email, /auth/login responde 429',
+  lastLoginStatus,
+);
+
+// --- 8. Logout revoca el token inmediatamente --------------------------------
+console.log('\n8. Logout revoca el token inmediatamente');
+const parentToken2 = await login(`javier.${stamp}@kidcare.test`, 'Padre1234!');
+
+const meBefore = await call('/auth/me', { token: parentToken2 });
+check(meBefore.status === 200, 'el token funciona antes del logout', meBefore.data);
+
+const logoutRes = await call('/auth/logout', {
+  token: parentToken2,
+  method: 'POST',
+});
+check(logoutRes.status === 200, 'POST /auth/logout responde 200', logoutRes.data);
+
+const meAfter = await call('/auth/me', { token: parentToken2 });
+check(
+  meAfter.status === 401,
+  'el mismo token ya no sirve tras el logout (revocado por jti)',
+  meAfter.data,
+);
+
 // --- Resultado --------------------------------------------------------------
 console.log(
   failures === 0

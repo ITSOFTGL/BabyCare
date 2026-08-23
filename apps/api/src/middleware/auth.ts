@@ -2,7 +2,9 @@ import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import type { Role, User } from '@kidcare/types';
 import { eq, getDb, users } from '@kidcare/db';
+import { readAuthCookie } from '../lib/cookies.ts';
 import { verifyToken } from '../lib/jwt.ts';
+import { isTokenRevoked } from '../lib/revocation.ts';
 
 export interface AppEnv {
   Variables: {
@@ -38,8 +40,11 @@ export function toPublicUser(row: {
  * de rol o una baja tengan efecto inmediato sin esperar a que expire el token.
  */
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
+  // El navegador manda la cookie httpOnly sola; un script (smoke test, futura
+  // app movil) puede seguir usando el header Authorization: Bearer.
   const header = c.req.header('Authorization') ?? '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const bearer = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const token = bearer || readAuthCookie(c) || '';
 
   if (!token) {
     throw new HTTPException(401, { message: 'Falta el token de acceso' });
@@ -50,6 +55,10 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     payload = await verifyToken(token);
   } catch {
     throw new HTTPException(401, { message: 'Token invalido o expirado' });
+  }
+
+  if (await isTokenRevoked(payload.jti)) {
+    throw new HTTPException(401, { message: 'La sesion fue cerrada' });
   }
 
   const db = getDb();

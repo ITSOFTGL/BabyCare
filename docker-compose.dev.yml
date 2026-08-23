@@ -34,7 +34,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-cambiar-en-produccion-1234567890}
       TENANT_NAME: ${TENANT_NAME:-Guarderia Demo}
       PORT: '3001'
-      CORS_ORIGINS: '*'
+      # La cookie de sesion httpOnly exige credentials:true, y los
+      # navegadores rechazan '*' junto con eso: hay que listar el origen
+      # real de la web.
+      CORS_ORIGINS: http://localhost:${WEB_PORT:-3000}
     ports:
       - '${API_PORT:-3001}:3001'
     depends_on:
@@ -61,7 +64,12 @@ services:
     container_name: kidcare-dev-web
     restart: unless-stopped
     environment:
-      # La resuelve el navegador del host, por eso es localhost y no `api`.
+      # API_URL/TENANT_NAME (sin prefijo) se leen en runtime desde
+      # apps/web/app/layout.tsx: es el mismo camino que usa produccion, para
+      # detectar aqui mismo cualquier regresion. Los NEXT_PUBLIC_* quedan de
+      # respaldo por si algo corre fuera de Docker.
+      API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+      TENANT_NAME: ${TENANT_NAME:-Guarderia Demo}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
       NEXT_PUBLIC_TENANT_NAME: ${TENANT_NAME:-Guarderia Demo}
       WATCHPACK_POLLING: 'true'
@@ -73,6 +81,11 @@ services:
       - ./apps/web/app:/app/apps/web/app
       - ./apps/web/components:/app/apps/web/components
       - ./apps/web/lib:/app/apps/web/lib
+      # tailwind.config.ts y postcss.config.mjs viven en la raiz de apps/web,
+      # fuera de los directorios de arriba: sin montarlos, un cambio de paleta
+      # o de animaciones se queda en el host y nunca llega al contenedor.
+      - ./apps/web/tailwind.config.ts:/app/apps/web/tailwind.config.ts
+      - ./apps/web/postcss.config.mjs:/app/apps/web/postcss.config.mjs
       - ./packages/types/src:/app/packages/types/src
 
 volumes:

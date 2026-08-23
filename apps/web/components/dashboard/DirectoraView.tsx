@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type {
   Child,
   DashboardSummary,
@@ -26,6 +27,7 @@ import {
   formatDate,
   formatMoney,
 } from '@/lib/format';
+import { DEFAULT_DIRECTORA_TAB, type DirectoraTabId } from '@/lib/nav';
 import {
   Badge,
   Button,
@@ -39,27 +41,11 @@ import {
   SectionTitle,
   Spinner,
   StatCard,
-  Tabs,
   Textarea,
   cx,
 } from '@/components/ui';
 
-type TabId =
-  | 'alumnos'
-  | 'salas'
-  | 'niveles'
-  | 'profesoras'
-  | 'pagos'
-  | 'cuentas';
-
-const TABS = [
-  { id: 'alumnos', label: '👶 Alumnos' },
-  { id: 'salas', label: '🎨 Salas' },
-  { id: 'niveles', label: '📚 Niveles' },
-  { id: 'profesoras', label: '👩‍🏫 Profesoras' },
-  { id: 'pagos', label: '💳 Pagos' },
-  { id: 'cuentas', label: '🔑 Cuentas' },
-] as const satisfies ReadonlyArray<{ id: TabId; label: string }>;
+type TabId = DirectoraTabId;
 
 /** Estado de catalogos que comparten casi todos los formularios del panel. */
 interface Catalog {
@@ -85,7 +71,10 @@ export function DirectoraView({
   data: DashboardSummary;
   onRefresh: () => Promise<void>;
 }) {
-  const [tab, setTab] = useState<TabId>('alumnos');
+  // La pestana activa la controla el sidebar via ?tab=, no un estado local:
+  // asi el sidebar (desktop y drawer movil) y esta vista nunca se desincronizan.
+  const searchParams = useSearchParams();
+  const tab = (searchParams.get('tab') as TabId | null) ?? DEFAULT_DIRECTORA_TAB;
   const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -158,8 +147,6 @@ export function DirectoraView({
       <ErrorText>{error}</ErrorText>
 
       <section>
-        <Tabs tabs={TABS} active={tab} onChange={setTab} />
-
         {tab === 'alumnos' && (
           <>
             <SectionTitle

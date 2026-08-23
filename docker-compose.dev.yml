@@ -41,10 +41,14 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      # Solo el codigo fuente: asi el node_modules del contenedor no se pisa
-      # con el del host (que en Windows ni siquiera existe).
+      # Se montan SOLO carpetas de codigo, nunca un workspace entero: bun 1.4
+      # instala las dependencias dentro de cada paquete
+      # (packages/db/node_modules), y montar ./packages las taparia con las del
+      # host —que en Windows son symlinks que Linux no sabe seguir—.
       - ./apps/api/src:/app/apps/api/src
-      - ./packages:/app/packages
+      - ./packages/db/src:/app/packages/db/src
+      - ./packages/db/drizzle:/app/packages/db/drizzle
+      - ./packages/types/src:/app/packages/types/src
     command:
       - sh
       - -c

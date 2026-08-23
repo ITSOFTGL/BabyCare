@@ -90,7 +90,13 @@ docker compose -f docker-compose.dev.yml down -v          # parar y borrar la BD
 bun install                                               # deps en el host
 bun run db:generate                                       # nueva migración tras tocar el esquema
 bun run db:studio                                         # explorador de Drizzle
+bun run smoke                                             # prueba de humo de punta a punta
 ```
+
+`bun run smoke` recorre el flujo real contra la API levantada —la directora crea
+sala, cuentas, profesora, alumno y pago; la profesora anota en la agenda; el
+padre lo ve— y comprueba además que cada rol **no** puede hacer lo que no le
+toca. Se puede repetir sin limpiar la base.
 
 ### Flujo de uso
 

@@ -1,0 +1,22 @@
+# Imagen de desarrollo de la API: instala dependencias del workspace y deja que
+# `bun --hot` recargue al vuelo el codigo montado desde el host.
+FROM oven/bun:1
+
+WORKDIR /app
+
+# Copiamos solo los manifiestos primero para aprovechar la cache de capas.
+COPY package.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/db/package.json packages/db/
+COPY packages/types/package.json packages/types/
+
+RUN bun install
+
+COPY tsconfig.base.json ./
+COPY packages packages
+COPY apps/api apps/api
+
+EXPOSE 3001
+
+CMD ["bun", "--hot", "apps/api/src/index.ts"]

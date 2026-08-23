@@ -1,0 +1,6 @@
+# Normaliza saltos de linea: los contenedores Linux no toleran CRLF en
+# scripts ni en los Dockerfile.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

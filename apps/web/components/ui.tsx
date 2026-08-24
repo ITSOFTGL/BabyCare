@@ -65,7 +65,15 @@ export function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cx('rounded-card bg-white p-5 shadow-soft', className)}>
+    <div
+      className={cx(
+        // El ring muy tenue es lo que le da un borde definido sobre el fondo
+        // crema sin caer en un borde duro; shadow-soft solo no bastaba para
+        // separar visualmente la card del fondo en pantallas grandes.
+        'rounded-card bg-white p-4 shadow-soft ring-1 ring-ink/[0.04] sm:p-5',
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -82,11 +90,11 @@ export function SectionTitle({
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h2 className="text-xl font-bold text-ink sm:text-2xl">
+      <h2 className="min-w-0 text-xl font-bold text-ink sm:text-2xl">
         {emoji && <span className="mr-2">{emoji}</span>}
         {children}
       </h2>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
@@ -103,7 +111,7 @@ export function StatCard({
   tone?: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-card bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift">
+    <div className="group relative overflow-hidden rounded-card bg-white p-4 shadow-soft ring-1 ring-ink/[0.04] transition hover:-translate-y-0.5 hover:shadow-lift sm:p-5">
       {/* Eco del emoji de fondo, muy tenue: un guino a las cards del panel de referencia. */}
       <span
         aria-hidden
@@ -119,8 +127,10 @@ export function StatCard({
       >
         {emoji}
       </div>
-      <p className="relative text-2xl font-bold leading-none text-ink">{value}</p>
-      <p className="relative mt-1 text-sm font-medium text-ink/55">{label}</p>
+      <p className="relative text-3xl font-extrabold leading-none tracking-tight text-ink">
+        {value}
+      </p>
+      <p className="relative mt-1.5 text-sm font-medium text-ink/55">{label}</p>
     </div>
   );
 }
@@ -184,8 +194,11 @@ export function Field({
   );
 }
 
+// El ring reemplaza al borde: es lo que hace que un campo se lea como campo
+// (y no como un bloque de color suelto) sobre una card blanca, sin caer en
+// un borde duro de 1px que desentone con el resto del sistema redondeado.
 const fieldClass =
-  'w-full rounded-2xl border-0 bg-background px-4 py-3 text-ink placeholder:text-ink/35 transition focus:ring-4 focus:ring-primary/25';
+  'w-full rounded-2xl border-0 bg-background px-4 py-3 text-ink ring-1 ring-inset ring-ink/10 placeholder:text-ink/35 transition focus:ring-2 focus:ring-primary/40';
 
 export function Input({
   className,
@@ -259,7 +272,7 @@ export function Modal({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 max-h-[92dvh] w-full max-w-lg animate-pop overflow-y-auto rounded-t-card bg-white p-6 shadow-soft sm:rounded-card">
+      <div className="relative z-10 max-h-[92dvh] w-full max-w-lg animate-pop overflow-y-auto rounded-t-card bg-white p-6 shadow-lift sm:rounded-card">
         <div className="mb-5 flex items-start justify-between gap-4">
           <h3 className="text-xl font-bold text-ink">
             {emoji && <span className="mr-2">{emoji}</span>}

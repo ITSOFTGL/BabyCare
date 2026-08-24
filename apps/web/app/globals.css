@@ -9,26 +9,19 @@
 
   body {
     @apply bg-background text-ink font-sans antialiased;
+    /*
+     * Red de seguridad: ningun elemento deberia poder empujar la pagina mas
+     * ancha que el viewport (una fila con muy poco espacio deberia envolver
+     * su contenido, no desbordarlo). Si algo lo intenta, se recorta aqui en
+     * vez de crear una franja invisible fuera de pantalla sin forma de
+     * llegar a ella con scroll.
+     */
+    overflow-x: hidden;
   }
 
   /* Sin bordes duros: el foco se marca con un halo suave del color primario. */
   *:focus-visible {
     @apply outline-none ring-4 ring-primary/25 ring-offset-0;
-  }
-}
-
-@layer components {
-  .card {
-    @apply rounded-card bg-white p-5 shadow-soft;
-  }
-
-  .field {
-    @apply w-full rounded-2xl border-0 bg-background px-4 py-3 text-ink
-      placeholder:text-ink/35 transition focus:ring-4 focus:ring-primary/25;
-  }
-
-  .label {
-    @apply mb-1.5 block text-sm font-semibold text-ink/70;
   }
 }
 

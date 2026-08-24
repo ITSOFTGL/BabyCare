@@ -36,8 +36,13 @@ const config: Config = {
         pill: '999px',
       },
       boxShadow: {
-        soft: '0 10px 30px -12px rgba(30, 41, 59, 0.18)',
+        // Un pelin mas presente que antes: las cards se sentian casi planas
+        // sobre el fondo crema por falta de profundidad real.
+        soft: '0 1px 2px -1px rgba(30, 41, 59, 0.06), 0 12px 28px -14px rgba(30, 41, 59, 0.22)',
         lift: '0 18px 40px -16px rgba(249, 115, 22, 0.45)',
+        // Elevacion sutil para elementos flotantes (dropdowns, menus) que
+        // necesitan separarse del contenido sin la fuerza de `lift`.
+        pop: '0 4px 12px -4px rgba(30, 41, 59, 0.12), 0 12px 24px -8px rgba(30, 41, 59, 0.14)',
       },
       fontFamily: {
         sans: ['var(--font-quicksand)', 'ui-rounded', 'system-ui', 'sans-serif'],

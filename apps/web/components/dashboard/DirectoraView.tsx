@@ -32,6 +32,7 @@ import {
   formatMoney,
 } from '@/lib/format';
 import { DEFAULT_DIRECTORA_TAB, type DirectoraTabId } from '@/lib/nav';
+import { InvoiceButton } from '@/components/InvoiceButton';
 import {
   Badge,
   Button,
@@ -343,9 +344,17 @@ export function DirectoraView({
                       </p>
                     </div>
                     {payment.status === 'pagado' ? (
-                      <Badge tone="bg-primary/10 text-primary-dark">
-                        ✅ Pagado {formatDate(payment.paidAt)}
-                      </Badge>
+                      <>
+                        <Badge tone="bg-primary/10 text-primary-dark">
+                          ✅ Pagado {formatDate(payment.paidAt)}
+                        </Badge>
+                        {payment.invoiceNumber && (
+                          <InvoiceButton
+                            paymentId={payment.id}
+                            invoiceNumber={payment.invoiceNumber}
+                          />
+                        )}
+                      </>
                     ) : (
                       <>
                         <Badge tone="bg-secondary/30 text-ink">

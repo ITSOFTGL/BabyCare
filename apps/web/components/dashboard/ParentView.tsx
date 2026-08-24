@@ -14,6 +14,7 @@ import {
   formatDateTime,
   formatMoney,
 } from '@/lib/format';
+import { InvoiceButton } from '@/components/InvoiceButton';
 import {
   Badge,
   Card,
@@ -156,9 +157,17 @@ export function ParentView({ data }: { data: DashboardSummary }) {
                   </p>
                 </div>
                 {payment.status === 'pagado' ? (
-                  <Badge tone="bg-primary/10 text-primary-dark">
-                    ✅ Pagado {formatDate(payment.paidAt)}
-                  </Badge>
+                  <>
+                    <Badge tone="bg-primary/10 text-primary-dark">
+                      ✅ Pagado {formatDate(payment.paidAt)}
+                    </Badge>
+                    {payment.invoiceNumber && (
+                      <InvoiceButton
+                        paymentId={payment.id}
+                        invoiceNumber={payment.invoiceNumber}
+                      />
+                    )}
+                  </>
                 ) : (
                   <Badge tone="bg-secondary/30 text-ink">
                     ⏳ Pendiente

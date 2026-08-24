@@ -84,3 +84,31 @@ export const apiPatch = <T>(path: string, data: unknown = {}) =>
 
 export const apiDelete = <T>(path: string) =>
   api<T>(path, { method: 'DELETE' });
+
+/**
+ * Descarga un archivo binario protegido (la factura en PDF) y dispara el
+ * guardado en el navegador. No usa `api()` porque la respuesta no es JSON.
+ */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const res = await fetch(`${getApiUrl()}${path}`, { credentials: 'include' });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    let message = `Error ${res.status}`;
+    try {
+      message = text ? (JSON.parse(text).error ?? message) : message;
+    } catch {
+      // el cuerpo no era JSON; nos quedamos con el mensaje generico
+    }
+    throw new ApiError(message, res.status);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

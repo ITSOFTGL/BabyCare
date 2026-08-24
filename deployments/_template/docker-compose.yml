@@ -20,6 +20,12 @@ services:
       TENANT_NAME: ${TENANT_NAME}
       PORT: '3001'
       CORS_ORIGINS: https://${SUBDOMAIN}.tudominio.com
+      # Opcionales: sin ellas, Web Push simplemente queda desactivado (las
+      # notificaciones in-app siguen funcionando). Genera un par propio con
+      # `bunx web-push generate-vapid-keys`.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@tudominio.com}
     networks: [kidcare_net]
 
   frontend:

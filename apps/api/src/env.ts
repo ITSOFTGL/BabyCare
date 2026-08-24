@@ -37,4 +37,13 @@ export const env = {
    */
   loginMaxPerIp: Number(process.env.LOGIN_MAX_PER_IP ?? 40),
   loginMaxPerEmail: Number(process.env.LOGIN_MAX_PER_EMAIL ?? 5),
+  /**
+   * Claves VAPID para Web Push (sin Firebase, es el protocolo estandar del
+   * navegador). Opcionales a proposito: si faltan, lib/push.ts simplemente no
+   * envia pushes (las notificaciones in-app siguen funcionando igual), asi
+   * que la API no debe morir al arrancar por no tenerlas configuradas.
+   */
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
+  vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@kidcare.test',
 };

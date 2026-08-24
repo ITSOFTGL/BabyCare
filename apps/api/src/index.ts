@@ -14,6 +14,8 @@ import { teacherRoutes } from './routes/teachers.ts';
 import { activityRoutes } from './routes/activities.ts';
 import { paymentRoutes } from './routes/payments.ts';
 import { notificationRoutes } from './routes/notifications.ts';
+import { announcementRoutes } from './routes/announcements.ts';
+import { pushRoutes } from './routes/push.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
 
 const app = new Hono<AppEnv>();
@@ -49,6 +51,8 @@ app.route('/api/teachers', teacherRoutes);
 app.route('/api/activities', activityRoutes);
 app.route('/api/payments', paymentRoutes);
 app.route('/api/notifications', notificationRoutes);
+app.route('/api/announcements', announcementRoutes);
+app.route('/api/push', pushRoutes);
 app.route('/api/dashboard', dashboardRoutes);
 
 app.notFound((c) => c.json({ error: 'Ruta no encontrada' }, 404));

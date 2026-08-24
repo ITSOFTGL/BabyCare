@@ -53,6 +53,19 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'pago',
   'agenda',
   'alerta',
+  'comunicado',
+]);
+
+/**
+ * A quien llega un comunicado: a todos los padres, a los de una sala, o al
+ * padre de un alumno puntual. La entrega en si (in-app) reutiliza la tabla
+ * `notifications` existente; esta tabla solo guarda el comunicado en si y a
+ * quien iba dirigido, para el historial de la directora.
+ */
+export const announcementAudienceEnum = pgEnum('announcement_audience', [
+  'todos',
+  'sala',
+  'padre',
 ]);
 
 export const users = pgTable('users', {
@@ -203,6 +216,45 @@ export const notifications = pgTable('notifications', {
     .defaultNow(),
 });
 
+export const announcements = pgTable('announcements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  audience: announcementAudienceEnum('audience').notNull(),
+  /** Solo cuando audience = 'sala'. */
+  roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'set null' }),
+  /** Solo cuando audience = 'padre': el comunicado va al apoderado de este nino. */
+  childId: uuid('child_id').references(() => children.id, {
+    onDelete: 'set null',
+  }),
+  createdBy: uuid('created_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  /** Cuantos apoderados distintos lo recibieron, para el historial. */
+  recipientCount: integer('recipient_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Suscripciones Web Push (protocolo estandar del navegador, sin Firebase). Un
+ * usuario puede tener varias filas: una por navegador/dispositivo en el que
+ * activo las notificaciones.
+ */
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 /**
  * Lista de revocacion de JWT (logout explicito). Guarda solo el `jti` del
  * token y cuando expira de forma natural: pasada esa fecha la fila ya no
@@ -227,4 +279,6 @@ export type TeacherRow = typeof teachers.$inferSelect;
 export type DailyActivityRow = typeof dailyActivities.$inferSelect;
 export type PaymentRow = typeof payments.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
+export type AnnouncementRow = typeof announcements.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type RevokedTokenRow = typeof revokedTokens.$inferSelect;

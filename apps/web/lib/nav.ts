@@ -11,6 +11,7 @@ export const DIRECTORA_TABS = [
   { id: 'profesoras', label: 'Profesoras', emoji: '👩‍🏫' },
   { id: 'pagos', label: 'Pagos', emoji: '💳' },
   { id: 'cuentas', label: 'Cuentas', emoji: '🔑' },
+  { id: 'comunicados', label: 'Comunicados', emoji: '📢' },
 ] as const;
 
 export type DirectoraTabId = (typeof DIRECTORA_TABS)[number]['id'];

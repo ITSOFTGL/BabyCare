@@ -21,7 +21,7 @@ import {
   type AppEnv,
 } from '../middleware/auth.ts';
 
-const guardianSchema = z.object({
+export const guardianSchema = z.object({
   name: z.string().min(2),
   phone: z.string().optional().nullable(),
   email: z.string().email().optional().nullable().or(z.literal('')),
@@ -98,7 +98,12 @@ childRoutes.get('/:id', async (c) => {
   return c.json({ ...child, guardians: tutors });
 });
 
-/** Reemplaza la lista de tutores de un nino (v1: sin edicion individual). */
+/**
+ * Reemplaza la lista de tutores de un nino. Solo se usa al CREAR el alumno
+ * (alta rapida con 1+ tutores de una); para editar despues, cada tutor tiene
+ * su propio endpoint (POST /:id/guardians, PATCH y DELETE en routes/guardians.ts)
+ * en vez de este reemplazo en bloque.
+ */
 async function replaceGuardians(
   childId: string,
   list: z.infer<typeof guardianSchema>[],
@@ -149,7 +154,9 @@ childRoutes.post('/', requireDirectora, async (c) => {
 
 childRoutes.patch('/:id', requireDirectora, async (c) => {
   const id = paramId(c);
-  const body = await parseBody(c, childSchema.partial());
+  // Se omite `guardians`: editar tutores ya tiene sus propios endpoints
+  // (ver mas abajo y routes/guardians.ts), no se aceptan aqui.
+  const body = await parseBody(c, childSchema.omit({ guardians: true }).partial());
   const db = getDb();
 
   const patch: Record<string, unknown> = {};
@@ -181,11 +188,40 @@ childRoutes.patch('/:id', requireDirectora, async (c) => {
     }
   }
 
-  if (body.guardians) await replaceGuardians(id, body.guardians);
+  // Los tutores YA NO se reemplazan aqui en bloque: usa POST /:id/guardians
+  // para anadir uno, o PATCH/DELETE /api/guardians/:id para editar/quitar
+  // uno existente sin tocar al resto.
 
   const [full] = await listChildren([id]);
   if (!full) throw new HTTPException(404, { message: 'Alumno no encontrado' });
   return c.json(full);
+});
+
+/** Anade UN tutor al nino sin tocar a los que ya tiene. */
+childRoutes.post('/:id/guardians', requireDirectora, async (c) => {
+  const childId = paramId(c);
+  const body = await parseBody(c, guardianSchema);
+  const db = getDb();
+
+  const [child] = await db
+    .select({ id: children.id })
+    .from(children)
+    .where(eq(children.id, childId))
+    .limit(1);
+  if (!child) throw new HTTPException(404, { message: 'Alumno no encontrado' });
+
+  const [created] = await db
+    .insert(guardians)
+    .values({
+      childId,
+      name: body.name.trim(),
+      phone: body.phone ?? null,
+      email: body.email ? body.email : null,
+      isPrimary: body.isPrimary,
+    })
+    .returning();
+
+  return c.json(created, 201);
 });
 
 childRoutes.delete('/:id', requireDirectora, async (c) => {

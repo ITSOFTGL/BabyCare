@@ -10,11 +10,11 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AuthResponse, User } from '@kidcare/types';
-import { api, apiPost, getToken, setToken } from './api';
+import { api, apiPost } from './api';
 
 interface AuthState {
   user: User | null;
-  /** true mientras se comprueba el token guardado al cargar la pagina. */
+  /** true mientras se comprueba la sesion (cookie httpOnly) al cargar la pagina. */
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
@@ -29,17 +29,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const refresh = useCallback(async () => {
-    if (!getToken()) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
+    // No hay forma de leer una cookie httpOnly desde JS, asi que la unica
+    // manera de saber si hay sesion es preguntarle a la API.
     try {
       const data = await api<{ user: User }>('/auth/me');
       setUser(data.user);
     } catch {
-      // Token caducado o revocado: lo tiramos para no dejar sesiones zombis.
-      setToken(null);
       setUser(null);
     } finally {
       setLoading(false);
@@ -51,18 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await apiPost<AuthResponse>(
-      '/auth/login',
-      { email, password },
-      false,
-    );
-    setToken(data.token);
+    const data = await apiPost<AuthResponse>('/auth/login', {
+      email,
+      password,
+    });
+    // El token ya quedo en la cookie httpOnly que puso la API; no se
+    // persiste nada mas en el navegador.
     setUser(data.user);
     return data.user;
   }, []);
 
   const logout = useCallback(() => {
-    setToken(null);
+    void apiPost('/auth/logout', {}).catch(() => {
+      // Si la API no responde igual queremos sacar al usuario del panel.
+    });
     setUser(null);
     router.replace('/login');
   }, [router]);

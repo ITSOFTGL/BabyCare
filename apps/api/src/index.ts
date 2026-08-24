@@ -9,6 +9,7 @@ import { userRoutes } from './routes/users.ts';
 import { levelRoutes } from './routes/levels.ts';
 import { roomRoutes } from './routes/rooms.ts';
 import { childRoutes } from './routes/children.ts';
+import { guardianRoutes } from './routes/guardians.ts';
 import { teacherRoutes } from './routes/teachers.ts';
 import { activityRoutes } from './routes/activities.ts';
 import { paymentRoutes } from './routes/payments.ts';
@@ -21,10 +22,13 @@ app.use('*', logger());
 app.use(
   '*',
   cors({
-    origin: env.corsOrigins.includes('*') ? '*' : env.corsOrigins,
+    // La cookie de sesion httpOnly exige credentials:true, y los navegadores
+    // rechazan '*' junto con eso: hace falta listar origenes explicitos
+    // (ver env.corsOrigins / CORS_ORIGINS).
+    origin: env.corsOrigins,
     allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
-    credentials: false,
+    credentials: true,
   }),
 );
 
@@ -40,6 +44,7 @@ app.route('/api/users', userRoutes);
 app.route('/api/levels', levelRoutes);
 app.route('/api/rooms', roomRoutes);
 app.route('/api/children', childRoutes);
+app.route('/api/guardians', guardianRoutes);
 app.route('/api/teachers', teacherRoutes);
 app.route('/api/activities', activityRoutes);
 app.route('/api/payments', paymentRoutes);

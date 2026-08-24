@@ -203,6 +203,20 @@ export const notifications = pgTable('notifications', {
     .defaultNow(),
 });
 
+/**
+ * Lista de revocacion de JWT (logout explicito). Guarda solo el `jti` del
+ * token y cuando expira de forma natural: pasada esa fecha la fila ya no
+ * hace falta (el propio JWT dejo de ser valido igual), asi que se puede
+ * limpiar periodicamente con un `DELETE ... WHERE expires_at < now()`.
+ */
+export const revokedTokens = pgTable('revoked_tokens', {
+  jti: uuid('jti').primaryKey(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type NewUserRow = typeof users.$inferInsert;
 export type LevelRow = typeof levels.$inferSelect;
@@ -213,3 +227,4 @@ export type TeacherRow = typeof teachers.$inferSelect;
 export type DailyActivityRow = typeof dailyActivities.$inferSelect;
 export type PaymentRow = typeof payments.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
+export type RevokedTokenRow = typeof revokedTokens.$inferSelect;

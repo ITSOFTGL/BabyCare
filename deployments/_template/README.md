@@ -14,18 +14,15 @@ Antes hace falta que existan:
 1. La red compartida: `docker network create kidcare_net`
 2. El Postgres compartido corriendo (`deployments/postgres`)
 3. La base de datos del cliente: `CREATE DATABASE kidcare_soleil;`
-4. Las imágenes construidas:
+4. Las imágenes construidas — **una sola vez, se comparten entre todos los
+   clientes** (`API_URL`/`TENANT_NAME` se leen en runtime, no se congelan en
+   el build; ver `apps/web/app/layout.tsx` y `apps/web/lib/api.ts`):
    ```bash
    docker build -t kidcare-backend:latest  -f apps/api/Dockerfile .
-   docker build -t kidcare-frontend:latest -f apps/web/Dockerfile \
-     --build-arg NEXT_PUBLIC_API_URL=https://soleil.tudominio.com/api \
-     --build-arg NEXT_PUBLIC_TENANT_NAME="Guardería Soleil" .
+   docker build -t kidcare-frontend:latest -f apps/web/Dockerfile .
    ```
-
-> **Importante:** las variables `NEXT_PUBLIC_*` se congelan en el bundle durante
-> el `docker build`, no en runtime. Por eso el frontend se construye por cliente
-> (o se le pasa un `NEXT_PUBLIC_API_URL` relativo como `/api` y se resuelve el
-> enrutado en el proxy).
+   No hace falta reconstruir el frontend por cada cliente nuevo: basta con
+   copiar la plantilla y poner su `API_URL`/`TENANT_NAME` en el `.env`.
 
 Al terminar, crea la primera cuenta de directora de esa guardería:
 

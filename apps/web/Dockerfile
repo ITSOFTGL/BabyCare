@@ -1,9 +1,7 @@
-# Imagen de produccion del frontend (kidcare-frontend).
-#
-# OJO: NEXT_PUBLIC_* se congela en el bundle en tiempo de build, asi que la URL
-# de la API y el nombre de la guarderia entran como build-args. Si dos clientes
-# necesitan valores distintos, hay que construir una imagen por cliente
-# (o pasar a leer la configuracion en runtime).
+# Imagen de produccion del frontend (kidcare-frontend). Se construye UNA sola
+# vez y la reutilizan todas las instancias de cliente, igual que el backend:
+# API_URL y TENANT_NAME se leen en runtime (ver app/layout.tsx y lib/api.ts),
+# no se congelan en el build, asi que no hace falta una imagen por subdominio.
 FROM oven/bun:1 AS builder
 
 WORKDIR /app
@@ -18,10 +16,6 @@ COPY tsconfig.base.json ./
 COPY packages/types packages/types
 COPY apps/web apps/web
 
-ARG NEXT_PUBLIC_API_URL=/api
-ARG NEXT_PUBLIC_TENANT_NAME=KidCare
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_TENANT_NAME=$NEXT_PUBLIC_TENANT_NAME
 ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/apps/web

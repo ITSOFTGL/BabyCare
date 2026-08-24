@@ -121,7 +121,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-40 max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm animate-pop overflow-y-auto rounded-card bg-white p-2 shadow-soft sm:w-96">
+        <div className="absolute right-0 top-12 z-40 max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm animate-pop overflow-y-auto rounded-card bg-white p-2 shadow-pop ring-1 ring-ink/[0.04] sm:w-96">
           <div className="flex items-center justify-between px-3 py-2">
             <p className="font-bold text-ink">🔔 Notificaciones</p>
             {unread > 0 && (

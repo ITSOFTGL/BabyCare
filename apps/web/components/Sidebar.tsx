@@ -29,13 +29,15 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               href={`/dashboard?tab=${item.id}`}
               onClick={onNavigate}
               className={cx(
-                'flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold transition',
+                'flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-150',
                 active
-                  ? 'bg-primary/15 text-primary-dark shadow-sm'
+                  ? 'bg-primary text-white shadow-lift'
                   : 'text-ink/60 hover:bg-secondary/20 hover:text-ink',
               )}
             >
-              <span className="text-lg">{item.emoji}</span>
+              <span className={cx('text-lg', !active && 'opacity-80')}>
+                {item.emoji}
+              </span>
               {item.label}
             </Link>
           );
@@ -54,7 +56,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         href="/dashboard"
         onClick={onNavigate}
-        className="flex items-center gap-3 rounded-2xl bg-primary/15 px-4 py-2.5 text-sm font-semibold text-primary-dark shadow-sm"
+        className="flex items-center gap-3 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lift"
       >
         <span className="text-lg">{single.emoji}</span>
         {single.label}

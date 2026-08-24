@@ -35,11 +35,11 @@ export function DashboardTopbarTitle() {
 
   return (
     <div className="min-w-0">
-      <p className="truncate text-base font-bold leading-tight text-ink">
-        <span className="mr-1.5">{emoji}</span>
+      <p className="truncate text-lg font-bold leading-tight text-ink sm:text-xl">
+        <span className="mr-2">{emoji}</span>
         {label}
       </p>
-      <p className="truncate text-xs font-medium text-ink/50 lg:hidden">
+      <p className="truncate text-xs font-medium text-ink/45">
         {getTenantName()}
       </p>
     </div>

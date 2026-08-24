@@ -36,19 +36,32 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm animate-fade-up">
-        <div className="mb-7 text-center">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-10">
+      {/* Manchas de color muy tenues detras de la card: sin ellas la pagina
+          era un card flotando en un mar de crema vacio. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-secondary/25 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-32 -right-16 h-80 w-80 rounded-full bg-primary/15 blur-3xl"
+      />
+
+      <div className="relative w-full max-w-sm animate-fade-up">
+        <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 animate-float items-center justify-center rounded-card bg-primary text-4xl shadow-lift">
             🧸
           </div>
-          <h1 className="text-3xl font-bold text-primary">KidCare</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">
+            KidCare
+          </h1>
           <p className="mt-1 text-sm font-medium text-ink/55">{getTenantName()}</p>
         </div>
 
         <form
           onSubmit={onSubmit}
-          className="space-y-4 rounded-card bg-white p-6 shadow-soft"
+          className="space-y-4 rounded-card bg-white p-6 shadow-lift ring-1 ring-ink/[0.04] sm:p-7"
         >
           <Field label="Email">
             <Input

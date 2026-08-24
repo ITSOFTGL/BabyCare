@@ -136,6 +136,7 @@ smoke test, una futura app móvil) puede seguir usando
 | GET    | `/payments`                 | según rol                    |
 | POST/PATCH/DELETE | `/payments` | directora                    |
 | PATCH  | `/payments/:id/pay`         | directora                    |
+| GET    | `/payments/:id/invoice`     | directora, o el padre dueño de ese pago |
 | GET    | `/notifications`            | autenticado (solo las suyas) |
 | GET/POST | `/announcements`          | directora                    |
 | GET    | `/push/vapid-public-key`    | autenticado                  |
@@ -191,6 +192,19 @@ Para probarlo en local: inicia sesión, abre la campana 🔔 y pulsa "Activar
 notificaciones push" (el navegador pide permiso). Después, cualquier evento
 que ya notifique in-app —una anotación de agenda, un pago, un comunicado—
 también llega como notificación nativa del sistema operativo.
+
+### Factura en PDF
+
+Al cobrar un pago (`PATCH /payments/:id/pay`) se genera automáticamente un
+PDF (pdf-lib) con los datos de la guardería, el alumno, el concepto, los
+meses cubiertos, el monto y un número de factura secuencial
+(`INV-{año}-{n}`), guardado en `STORAGE_DIR/invoices/{paymentId}.pdf` — un
+volumen Docker nombrado, para que sobreviva a redeploys.
+
+`GET /payments/:id/invoice` la descarga; solo la directora o el padre dueño
+de ese alumno pueden acceder. El botón "📄 Descargar factura" aparece en el
+historial de pagos (directora y padre) en cuanto el pago queda marcado como
+pagado.
 
 ---
 
@@ -282,7 +296,8 @@ y personas autorizadas, profesoras, agenda diaria, pagos manuales, dashboard por
 rol y notificaciones in-app.
 
 **v2 — implementado hasta ahora:** comunicados (a todos / por sala / a un
-alumno puntual) y notificaciones Web Push con VAPID.
+alumno puntual), notificaciones Web Push con VAPID, y factura en PDF
+automática al cobrar un pago.
 
-**v2 — todavía no implementado:** chat por sala, factura PDF automática, 2FA
+**v2 — todavía no implementado:** chat por sala, 2FA
 y app móvil.

@@ -43,6 +43,7 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-BH-VmTe1fJ7WTi1etP_YSbvYtmRYE19miSs0fjZ4n9N96hYWYX58nJKclvKnVKjlxMgGaTUawVUf90gFZVF3maE}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-s2lWTT8YCGqGRKAIoYLM6K-DNJeIgA03ptyDpQQK5Ls}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@kidcare.test}
+      STORAGE_DIR: /app/storage
     ports:
       - '${API_PORT:-3001}:3001'
     depends_on:
@@ -57,6 +58,9 @@ services:
       - ./packages/db/src:/app/packages/db/src
       - ./packages/db/drizzle:/app/packages/db/drizzle
       - ./packages/types/src:/app/packages/types/src
+      # Facturas en PDF: en un volumen nombrado para que sobrevivan a
+      # `docker compose down` (sin -v) y a rebuilds de la imagen.
+      - kidcare_dev_storage:/app/storage
     command:
       - sh
       - -c
@@ -96,3 +100,4 @@ services:
 
 volumes:
   kidcare_dev_pgdata:
+  kidcare_dev_storage:

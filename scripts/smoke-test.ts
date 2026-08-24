@@ -46,6 +46,19 @@ async function call(
   return { status: res.status, data: text ? JSON.parse(text) : null };
 }
 
+/** Como call(), pero para respuestas binarias (la factura en PDF no es JSON). */
+async function callBinary(path: string, { token }: { token?: string } = {}) {
+  const res = await fetch(`${API}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  return {
+    status: res.status,
+    contentType: res.headers.get('content-type'),
+    bytes,
+  };
+}
+
 async function login(email: string, password: string) {
   const { status, data } = await call('/auth/login', {
     method: 'POST',
@@ -217,6 +230,23 @@ const paid = await call(`/payments/${payment.data.id}/pay`, {
   body: { method: 'transferencia' },
 });
 check(paid.status === 200 && paid.data.status === 'pagado', 'PATCH /payments/:id/pay la marca pagada', paid.data);
+check(
+  typeof paid.data.invoiceNumber === 'string' && paid.data.invoiceNumber.length > 0,
+  'al cobrar, se genera un numero de factura',
+  paid.data.invoiceNumber,
+);
+
+const invoiceAsAdmin = await callBinary(`/payments/${payment.data.id}/invoice`, {
+  token: admin,
+});
+check(
+  invoiceAsAdmin.status === 200 &&
+    invoiceAsAdmin.contentType === 'application/pdf' &&
+    // %PDF es el "magic number" con el que arranca todo PDF valido.
+    new TextDecoder().decode(invoiceAsAdmin.bytes.slice(0, 4)) === '%PDF',
+  'GET /payments/:id/invoice la directora descarga un PDF valido',
+  { status: invoiceAsAdmin.status, contentType: invoiceAsAdmin.contentType },
+);
 
 // --- 5. La profesora anota en la agenda -------------------------------------
 console.log('\n5. La profesora entra y anota en la agenda diaria');
@@ -323,6 +353,25 @@ check(forbiddenActivity.status === 403, 'el padre NO puede escribir en la agenda
 
 const forbiddenUsers = await call('/users', { token: parentToken });
 check(forbiddenUsers.status === 403, 'el padre NO puede listar cuentas (403)');
+
+// --- 6b. Descarga de factura ---------------------------------------------------
+console.log('\n6b. Descarga de factura en PDF');
+const invoiceAsParent = await callBinary(`/payments/${payment.data.id}/invoice`, {
+  token: parentToken,
+});
+check(
+  invoiceAsParent.status === 200 && invoiceAsParent.contentType === 'application/pdf',
+  'el padre dueño del pago SÍ puede descargar su factura',
+  { status: invoiceAsParent.status, contentType: invoiceAsParent.contentType },
+);
+
+const invoiceAsTeacher = await callBinary(`/payments/${payment.data.id}/invoice`, {
+  token: teacherToken,
+});
+check(
+  invoiceAsTeacher.status === 403,
+  'la profesora NO puede descargar facturas (403)',
+);
 
 // --- 7. Rate limiting en /auth/login -----------------------------------------
 console.log('\n7. Rate limiting en /auth/login');

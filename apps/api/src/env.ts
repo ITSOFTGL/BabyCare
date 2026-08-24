@@ -46,4 +46,10 @@ export const env = {
   vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
   vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@kidcare.test',
+  /**
+   * Carpeta donde se guardan archivos generados (facturas en PDF). Debe
+   * apuntar a un volumen persistente: sin uno, cada redeploy borraria las
+   * facturas ya emitidas (ver docker-compose.dev.yml / deployments/_template).
+   */
+  storageDir: process.env.STORAGE_DIR ?? './storage',
 };

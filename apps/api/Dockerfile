@@ -24,6 +24,12 @@ COPY tsconfig.base.json ./
 COPY packages packages
 COPY apps/api apps/api
 
+# Se crea con el dueno correcto ANTES de montar el volumen: la primera vez que
+# un volumen nombrado se une a un directorio no vacio, Docker copia su
+# contenido (y permisos) al volumen, asi que sin esto quedaria root:root y
+# el proceso (USER bun) no podria escribir las facturas.
+RUN mkdir -p /app/storage/invoices && chown -R bun:bun /app/storage
+
 USER bun
 EXPOSE 3001
 

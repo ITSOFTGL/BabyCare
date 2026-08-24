@@ -11,9 +11,15 @@ import {
   payments,
 } from '@kidcare/db';
 import { PAYMENT_METHODS, PAYMENT_STATUSES } from '@kidcare/types';
+import { env } from '../env.ts';
 import { paramId, parseBody, parseQuery, uuidSchema } from '../lib/validate.ts';
 import { canAccessChild, getVisibleChildIds } from '../lib/scope.ts';
 import { notifyUser } from '../lib/notify.ts';
+import {
+  generateInvoicePdf,
+  nextInvoiceNumber,
+  readInvoicePdf,
+} from '../lib/invoice.ts';
 import {
   requireAuth,
   requireDirectora,
@@ -134,13 +140,17 @@ paymentRoutes.patch('/:id/pay', requireDirectora, async (c) => {
     throw new HTTPException(409, { message: 'Ese pago ya estaba cobrado' });
   }
 
+  const paidAt = new Date();
+  const invoiceNumber = await nextInvoiceNumber();
+
   const [updated] = await db
     .update(payments)
     .set({
       status: 'pagado',
       method: body.method,
-      paidAt: new Date(),
+      paidAt,
       observation: body.observation ?? current.observation,
+      invoiceNumber,
     })
     .where(eq(payments.id, id))
     .returning();
@@ -151,15 +161,80 @@ paymentRoutes.patch('/:id/pay', requireDirectora, async (c) => {
     .where(eq(children.id, current.childId))
     .limit(1);
 
+  // La factura no debe tumbar la confirmacion del pago si algo falla al
+  // generarla (disco lleno, etc.): se puede regenerar despues si hace falta.
+  try {
+    await generateInvoicePdf({
+      paymentId: id,
+      invoiceNumber,
+      tenantName: env.tenantName,
+      childName: child?.name ?? 'Alumno',
+      months: current.months,
+      amount: current.amount,
+      method: body.method,
+      paidAt,
+    });
+  } catch (error) {
+    console.error('[invoice] no se pudo generar el PDF:', error);
+  }
+
   await notifyUser({
     userId: child?.parentId,
     title: `Pago confirmado de ${child?.name ?? 'tu hijo/a'}`,
     message: `Recibimos ${current.amount} € por ${current.months.join(', ')}. ¡Gracias!`,
     type: 'pago',
-    data: { paymentId: id },
+    data: { paymentId: id, invoiceNumber },
   });
 
   return c.json({ ...updated, childName: child?.name });
+});
+
+/**
+ * Descarga la factura en PDF de un pago ya cobrado. Solo la directora, o el
+ * padre dueno de ese alumno, pueden verla: no es una ruta de solo lectura
+ * generica como el resto de GET /payments.
+ */
+paymentRoutes.get('/:id/invoice', async (c) => {
+  const id = paramId(c);
+  const user = c.get('user');
+  const db = getDb();
+
+  const [payment] = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.id, id))
+    .limit(1);
+  if (!payment) throw new HTTPException(404, { message: 'Pago no encontrado' });
+
+  if (user.role !== 'directora') {
+    if (user.role !== 'padre') {
+      throw new HTTPException(403, { message: 'No puedes ver esta factura' });
+    }
+    const [child] = await db
+      .select({ parentId: children.parentId })
+      .from(children)
+      .where(eq(children.id, payment.childId))
+      .limit(1);
+    if (!child || child.parentId !== user.id) {
+      throw new HTTPException(403, { message: 'No puedes ver esta factura' });
+    }
+  }
+
+  if (payment.status !== 'pagado' || !payment.invoiceNumber) {
+    throw new HTTPException(404, { message: 'Ese pago todavía no tiene factura' });
+  }
+
+  const pdf = await readInvoicePdf(id);
+  if (!pdf) {
+    throw new HTTPException(404, { message: 'La factura no está disponible' });
+  }
+
+  c.header('Content-Type', 'application/pdf');
+  c.header(
+    'Content-Disposition',
+    `attachment; filename="factura-${payment.invoiceNumber}.pdf"`,
+  );
+  return c.body(new Uint8Array(pdf));
 });
 
 paymentRoutes.patch('/:id', requireDirectora, async (c) => {

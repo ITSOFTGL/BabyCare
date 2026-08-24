@@ -26,6 +26,11 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@tudominio.com}
+      STORAGE_DIR: /app/storage
+    volumes:
+      # Facturas en PDF de este cliente. Nombrado con TENANT_SLUG para que no
+      # choque con el volumen de otro cliente en el mismo host.
+      - kidcare_${TENANT_SLUG}_storage:/app/storage
     networks: [kidcare_net]
 
   frontend:
@@ -39,6 +44,9 @@ services:
       TENANT_NAME: ${TENANT_NAME}
     depends_on: [backend]
     networks: [kidcare_net]
+
+volumes:
+  kidcare_${TENANT_SLUG}_storage:
 
 networks:
   kidcare_net:

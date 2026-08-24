@@ -196,6 +196,8 @@ export const payments = pgTable('payments', {
   method: paymentMethodEnum('method'),
   observation: text('observation'),
   paidAt: timestamp('paid_at', { withTimezone: true }),
+  /** Se asigna al marcar el pago como pagado; el PDF vive en STORAGE_DIR/invoices/{id}.pdf. */
+  invoiceNumber: text('invoice_number').unique(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

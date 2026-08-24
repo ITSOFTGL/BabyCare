@@ -173,6 +173,7 @@ export interface Payment {
   method: PaymentMethod | null;
   observation: string | null;
   paidAt: string | null;
+  invoiceNumber: string | null;
   createdAt: string;
   childName?: string;
 }

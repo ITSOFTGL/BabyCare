@@ -113,18 +113,23 @@ toca. Se puede repetir sin limpiar la base.
 ## API
 
 Todas las rutas cuelgan de `/api`. Salvo `POST /api/auth/login`, todas exigen
-cabecera `Authorization: Bearer <token>`.
+sesión: el navegador la manda sola en una cookie httpOnly; un script (el
+smoke test, una futura app móvil) puede seguir usando
+`Authorization: Bearer <token>`.
 
 | Método | Ruta                        | Quién                        |
 | ------ | --------------------------- | ---------------------------- |
-| POST   | `/auth/login`               | público                      |
+| POST   | `/auth/login`               | público (rate-limited)       |
 | GET    | `/auth/me`                  | autenticado                  |
+| POST   | `/auth/logout`              | público (revoca el token actual) |
 | POST   | `/auth/change-password`     | autenticado                  |
 | GET/POST/PATCH/DELETE | `/users`     | directora                    |
 | GET    | `/levels`, `/rooms`         | autenticado                  |
 | POST/PATCH/DELETE | `/levels`, `/rooms` | directora             |
 | GET    | `/children`                 | según rol (ver abajo)        |
 | POST/PATCH/DELETE | `/children` | directora                    |
+| POST   | `/children/:id/guardians`   | directora (añade un tutor)   |
+| PATCH/DELETE | `/guardians/:id`      | directora (edita/quita un tutor) |
 | GET/POST/PATCH/DELETE | `/teachers` | leer: autenticado; escribir: directora |
 | GET    | `/activities`               | según rol                    |
 | POST   | `/activities`               | directora, profesora, auxiliar |
@@ -142,6 +147,22 @@ cabecera `Authorization: Bearer <token>`.
 - `directora` — toda la guardería.
 - `profesora` / `auxiliar` — solo los niños de la sala de su ficha de profesora.
 - `padre` — solo los niños con `parent_id` igual a su usuario.
+
+**Filtro de agenda por fecha** — `GET /activities?from=&to=` recibe instantes
+UTC en ISO calculados por el cliente (ver `lib/format.ts#dayBoundsLocal`), no
+una fecha suelta interpretada por el servidor: así "hoy" es siempre el día
+real de quien mira la pantalla, sin importar en qué huso corra el contenedor.
+
+### Seguridad de la sesión
+
+- **Cookie httpOnly + SameSite=Lax** en vez de `localStorage`: el JWT nunca es
+  visible para JavaScript, a salvo de robo por XSS.
+- **Rate limiting** en `/auth/login`: `LOGIN_MAX_PER_IP` (40/15min, frena abuso
+  general) y `LOGIN_MAX_PER_EMAIL` (5/15min, protege una cuenta puntual).
+- **Revocación por `jti`**: cada token lleva un id único; `POST /auth/logout`
+  lo marca revocado en la tabla `revoked_tokens` aunque todavía no haya
+  caducado. Rotar `JWT_SECRET` invalida TODOS los tokens de golpe (útil si se
+  filtra el secreto).
 
 ### Comunicados
 
@@ -179,8 +200,8 @@ también llega como notificación nativa del sistema operativo.
 de base de datos completa, por eso no existe ninguna columna `tenant_id`.
 
 Tablas de v1: `users`, `levels`, `rooms`, `children`, `guardians`, `teachers`,
-`daily_activities`, `payments`, `notifications`. De fase 2 (comunicados y Web
-Push): `announcements`, `push_subscriptions`.
+`daily_activities`, `payments`, `notifications`, `revoked_tokens`. De fase 2
+(comunicados y Web Push): `announcements`, `push_subscriptions`.
 
 Tras modificar `packages/db/src/schema.ts`:
 
@@ -205,10 +226,13 @@ cd ../cloudflared && cp config.example.yml config.yml   # pon tu tunnel id
 docker compose up -d
 ```
 
-Y las imágenes compartidas:
+Y las imágenes compartidas — **una sola vez, sirven para todos los
+clientes** (`API_URL`/`TENANT_NAME` del frontend se leen en runtime, no se
+congelan en el build; ver `apps/web/app/layout.tsx`):
 
 ```bash
-docker build -t kidcare-backend:latest -f apps/api/Dockerfile .
+docker build -t kidcare-backend:latest  -f apps/api/Dockerfile .
+docker build -t kidcare-frontend:latest -f apps/web/Dockerfile .
 ```
 
 ### Por cada cliente nuevo
@@ -220,16 +244,7 @@ docker build -t kidcare-backend:latest -f apps/api/Dockerfile .
      psql -U kidcare -d kidcare_admin -c 'CREATE DATABASE kidcare_soleil;'
    ```
 
-2. **Imagen de frontend del cliente** — `NEXT_PUBLIC_*` se congela en el bundle
-   durante el build, así que se construye una por subdominio:
-
-   ```bash
-   docker build -t kidcare-frontend:soleil -f apps/web/Dockerfile \
-     --build-arg NEXT_PUBLIC_API_URL=https://soleil.tudominio.com/api \
-     --build-arg NEXT_PUBLIC_TENANT_NAME="Guardería Soleil" .
-   ```
-
-3. **Instancia** a partir de la plantilla
+2. **Instancia** a partir de la plantilla
 
    ```bash
    cp -r deployments/_template deployments/soleil
@@ -241,13 +256,13 @@ docker build -t kidcare-backend:latest -f apps/api/Dockerfile .
 
    El backend aplica las migraciones al arrancar.
 
-4. **Primera directora de esa guardería**
+3. **Primera directora de esa guardería**
 
    ```bash
    docker exec -it kidcare-soleil-backend bun packages/db/src/seed.ts
    ```
 
-5. **Ingress del túnel** — dos entradas nuevas en
+4. **Ingress del túnel** — dos entradas nuevas en
    `deployments/cloudflared/config.yml` (una para `/api/*` al backend y otra
    para el resto al frontend), y `docker compose restart cloudflared`.
 

@@ -154,6 +154,49 @@ check(
   child.data.authorizedPickup,
 );
 
+// --- 3b. Edicion individual de tutores ---------------------------------------
+console.log('\n3b. Edición individual de tutores (sin reemplazo en bloque)');
+const guardian = await call(`/children/${childId}/guardians`, {
+  token: admin,
+  method: 'POST',
+  body: { name: 'Javier Ruiz', phone: '+34 600 000 000', isPrimary: true },
+});
+check(guardian.status === 201, 'POST /children/:id/guardians crea un tutor', guardian.data);
+const guardianId = guardian.data.id;
+
+const guardianUpdate = await call(`/guardians/${guardianId}`, {
+  token: admin,
+  method: 'PATCH',
+  body: { phone: '+34 611 111 111' },
+});
+check(
+  guardianUpdate.status === 200 && guardianUpdate.data.phone === '+34 611 111 111',
+  'PATCH /guardians/:id edita SOLO ese tutor',
+  guardianUpdate.data,
+);
+
+const childAfterPatch = await call(`/children/${childId}`, {
+  token: admin,
+  method: 'PATCH',
+  body: { observations: 'Nota actualizada' },
+});
+check(
+  childAfterPatch.status === 200,
+  'PATCH /children/:id sigue funcionando sin tocar guardians',
+);
+const childDetail = await call(`/children/${childId}`, { token: admin });
+check(
+  childDetail.data.guardians?.some((g: { id: string }) => g.id === guardianId),
+  'el tutor sigue existiendo tras editar el alumno (ya no se reemplaza en bloque)',
+  childDetail.data.guardians,
+);
+
+const guardianDelete = await call(`/guardians/${guardianId}`, {
+  token: admin,
+  method: 'DELETE',
+});
+check(guardianDelete.status === 200, 'DELETE /guardians/:id quita el tutor');
+
 // --- 4. Pagos ---------------------------------------------------------------
 console.log('\n4. La directora registra un pago y lo cobra');
 const payment = await call('/payments', {
@@ -196,6 +239,40 @@ const activity = await call('/activities', {
   },
 });
 check(activity.status === 201, 'POST /activities registra la anotación', activity.data);
+
+// --- 5b. Filtro de agenda por rango (calculado como lo haria el cliente) ----
+const now = new Date();
+const todayFrom = new Date(now);
+todayFrom.setHours(0, 0, 0, 0);
+const todayTo = new Date(now);
+todayTo.setHours(23, 59, 59, 999);
+
+const todayActivities = await call(
+  `/activities?from=${encodeURIComponent(todayFrom.toISOString())}&to=${encodeURIComponent(todayTo.toISOString())}`,
+  { token: teacherToken },
+);
+check(
+  todayActivities.data?.some((a: { id: string }) => a.id === activity.data.id),
+  'GET /activities?from=&to= (rango de hoy) incluye la anotación recien creada',
+  todayActivities.data,
+);
+
+const yesterday = new Date(now);
+yesterday.setDate(yesterday.getDate() - 1);
+const yFrom = new Date(yesterday);
+yFrom.setHours(0, 0, 0, 0);
+const yTo = new Date(yesterday);
+yTo.setHours(23, 59, 59, 999);
+
+const yesterdayActivities = await call(
+  `/activities?from=${encodeURIComponent(yFrom.toISOString())}&to=${encodeURIComponent(yTo.toISOString())}`,
+  { token: teacherToken },
+);
+check(
+  !yesterdayActivities.data?.some((a: { id: string }) => a.id === activity.data.id),
+  'GET /activities?from=&to= (rango de ayer) NO incluye la anotación de hoy',
+  yesterdayActivities.data,
+);
 
 const forbiddenChild = await call('/children', {
   token: teacherToken,
@@ -247,8 +324,47 @@ check(forbiddenActivity.status === 403, 'el padre NO puede escribir en la agenda
 const forbiddenUsers = await call('/users', { token: parentToken });
 check(forbiddenUsers.status === 403, 'el padre NO puede listar cuentas (403)');
 
-// --- 7. Comunicados -----------------------------------------------------------
-console.log('\n7. La directora envía un comunicado individual');
+// --- 7. Rate limiting en /auth/login -----------------------------------------
+console.log('\n7. Rate limiting en /auth/login');
+// Email desechable: nunca existe, asi que solo se prueba el limite por email
+// sin arriesgar bloquear la cuenta real de la directora.
+const rateLimitEmail = `ratelimit-${stamp}@kidcare.test`;
+let lastLoginStatus = 0;
+for (let i = 0; i < 6; i++) {
+  const attempt = await call('/auth/login', {
+    method: 'POST',
+    body: { email: rateLimitEmail, password: 'password-incorrecta' },
+  });
+  lastLoginStatus = attempt.status;
+}
+check(
+  lastLoginStatus === 429,
+  'tras 6 intentos fallidos con el mismo email, /auth/login responde 429',
+  lastLoginStatus,
+);
+
+// --- 8. Logout revoca el token inmediatamente --------------------------------
+console.log('\n8. Logout revoca el token inmediatamente');
+const parentToken2 = await login(`javier.${stamp}@kidcare.test`, 'Padre1234!');
+
+const meBefore = await call('/auth/me', { token: parentToken2 });
+check(meBefore.status === 200, 'el token funciona antes del logout', meBefore.data);
+
+const logoutRes = await call('/auth/logout', {
+  token: parentToken2,
+  method: 'POST',
+});
+check(logoutRes.status === 200, 'POST /auth/logout responde 200', logoutRes.data);
+
+const meAfter = await call('/auth/me', { token: parentToken2 });
+check(
+  meAfter.status === 401,
+  'el mismo token ya no sirve tras el logout (revocado por jti)',
+  meAfter.data,
+);
+
+// --- 9. Comunicados -----------------------------------------------------------
+console.log('\n9. La directora envía un comunicado individual');
 const announcement = await call('/announcements', {
   token: admin,
   method: 'POST',
@@ -293,8 +409,8 @@ check(
   'la profesora NO puede enviar comunicados (403)',
 );
 
-// --- 8. Web Push (suscripcion) ------------------------------------------------
-console.log('\n8. El padre activa notificaciones push');
+// --- 10. Web Push (suscripcion) ------------------------------------------------
+console.log('\n10. El padre activa notificaciones push');
 const noTokenVapid = await call('/push/vapid-public-key');
 check(noTokenVapid.status === 401, 'sin token, /push/vapid-public-key responde 401');
 

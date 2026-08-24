@@ -1,6 +1,6 @@
 {
-  "id": "d666eaaf-6577-458f-8da6-cb4187619ce3",
-  "prevId": "d86eaa60-f79a-40bb-bf9b-3355aabfede5",
+  "id": "ba0bb80f-bf15-44bd-9776-b47ef95ec873",
+  "prevId": "39dc385b-058f-4233-97e6-ac7a4d3c7d0b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -699,6 +699,38 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.revoked_tokens": {
+      "name": "revoked_tokens",
+      "schema": "",
+      "columns": {
+        "jti": {
+          "name": "jti",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

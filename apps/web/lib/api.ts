@@ -1,20 +1,31 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
-
-export const TENANT_NAME =
-  process.env.NEXT_PUBLIC_TENANT_NAME ?? 'KidCare';
-
-const TOKEN_KEY = 'kidcare.token';
-
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+/**
+ * Configuracion inyectada por app/layout.tsx (un <script> con
+ * window.__KIDCARE_CONFIG__) leida en CADA request del servidor Next, no
+ * congelada en el build. Esto permite un solo `kidcare-frontend:latest`
+ * compartido por todos los clientes: cada instancia solo cambia sus
+ * variables de entorno (API_URL, TENANT_NAME), sin reconstruir la imagen.
+ *
+ * Los NEXT_PUBLIC_* siguen de respaldo para `next dev` sin Docker y por si
+ * el script aun no corrio (SSR muy temprano).
+ */
+declare global {
+  interface Window {
+    __KIDCARE_CONFIG__?: { apiUrl: string; tenantName: string };
+  }
 }
 
-export function setToken(token: string | null) {
-  if (typeof window === 'undefined') return;
-  if (token) window.localStorage.setItem(TOKEN_KEY, token);
-  else window.localStorage.removeItem(TOKEN_KEY);
+export function getApiUrl(): string {
+  if (typeof window !== 'undefined' && window.__KIDCARE_CONFIG__) {
+    return window.__KIDCARE_CONFIG__.apiUrl;
+  }
+  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+}
+
+export function getTenantName(): string {
+  if (typeof window !== 'undefined' && window.__KIDCARE_CONFIG__) {
+    return window.__KIDCARE_CONFIG__.tenantName;
+  }
+  return process.env.NEXT_PUBLIC_TENANT_NAME ?? 'KidCare';
 }
 
 export class ApiError extends Error {
@@ -29,21 +40,22 @@ export class ApiError extends Error {
 }
 
 /**
- * Cliente HTTP de la API. Adjunta el JWT guardado en localStorage y convierte
- * cualquier respuesta no-2xx en un ApiError con el mensaje que manda el backend.
+ * Cliente HTTP de la API. La sesion viaja en una cookie httpOnly (no en
+ * localStorage, a salvo de XSS): `credentials: 'include'` es lo que hace que
+ * el navegador la adjunte sola en cada request. Convierte cualquier
+ * respuesta no-2xx en un ApiError con el mensaje que manda el backend.
  */
 export async function api<T>(
   path: string,
-  options: RequestInit & { auth?: boolean } = {},
+  options: RequestInit = {},
 ): Promise<T> {
-  const { auth = true, headers, ...rest } = options;
-  const token = auth ? getToken() : null;
+  const { headers, ...rest } = options;
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getApiUrl()}${path}`, {
     ...rest,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
   });
@@ -64,8 +76,8 @@ export async function api<T>(
 
 export const apiGet = <T>(path: string) => api<T>(path);
 
-export const apiPost = <T>(path: string, data: unknown, auth = true) =>
-  api<T>(path, { method: 'POST', body: JSON.stringify(data), auth });
+export const apiPost = <T>(path: string, data: unknown) =>
+  api<T>(path, { method: 'POST', body: JSON.stringify(data) });
 
 export const apiPatch = <T>(path: string, data: unknown = {}) =>
   api<T>(path, { method: 'PATCH', body: JSON.stringify(data) });

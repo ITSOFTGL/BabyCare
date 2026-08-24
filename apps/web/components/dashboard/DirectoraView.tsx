@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type {
   Announcement,
   Child,
   DashboardSummary,
+  Guardian,
   Level,
   Payment,
   Room,
@@ -29,6 +31,7 @@ import {
   formatDate,
   formatMoney,
 } from '@/lib/format';
+import { DEFAULT_DIRECTORA_TAB, type DirectoraTabId } from '@/lib/nav';
 import {
   Badge,
   Button,
@@ -42,29 +45,11 @@ import {
   SectionTitle,
   Spinner,
   StatCard,
-  Tabs,
   Textarea,
   cx,
 } from '@/components/ui';
 
-type TabId =
-  | 'alumnos'
-  | 'salas'
-  | 'niveles'
-  | 'profesoras'
-  | 'pagos'
-  | 'cuentas'
-  | 'comunicados';
-
-const TABS = [
-  { id: 'alumnos', label: '👶 Alumnos' },
-  { id: 'salas', label: '🎨 Salas' },
-  { id: 'niveles', label: '📚 Niveles' },
-  { id: 'profesoras', label: '👩‍🏫 Profesoras' },
-  { id: 'pagos', label: '💳 Pagos' },
-  { id: 'cuentas', label: '🔑 Cuentas' },
-  { id: 'comunicados', label: '📢 Comunicados' },
-] as const satisfies ReadonlyArray<{ id: TabId; label: string }>;
+type TabId = DirectoraTabId;
 
 /** Estado de catalogos que comparten casi todos los formularios del panel. */
 interface Catalog {
@@ -92,11 +77,15 @@ export function DirectoraView({
   data: DashboardSummary;
   onRefresh: () => Promise<void>;
 }) {
-  const [tab, setTab] = useState<TabId>('alumnos');
+  // La pestana activa la controla el sidebar via ?tab=, no un estado local:
+  // asi el sidebar (desktop y drawer movil) y esta vista nunca se desincronizan.
+  const searchParams = useSearchParams();
+  const tab = (searchParams.get('tab') as TabId | null) ?? DEFAULT_DIRECTORA_TAB;
   const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<TabId | null>(null);
+  const [guardianChild, setGuardianChild] = useState<Child | null>(null);
 
   const loadCatalog = useCallback(async () => {
     try {
@@ -167,8 +156,6 @@ export function DirectoraView({
       <ErrorText>{error}</ErrorText>
 
       <section>
-        <Tabs tabs={TABS} active={tab} onChange={setTab} />
-
         {tab === 'alumnos' && (
           <>
             <SectionTitle
@@ -194,6 +181,7 @@ export function DirectoraView({
                     key={child.id}
                     child={child}
                     onDeleted={refreshAll}
+                    onManageGuardians={() => setGuardianChild(child)}
                   />
                 ))}
               </div>
@@ -517,6 +505,15 @@ export function DirectoraView({
       >
         <UserForm onDone={afterCreate} />
       </Modal>
+
+      <Modal
+        open={guardianChild !== null}
+        title={guardianChild ? `Tutores de ${guardianChild.name}` : ''}
+        emoji="👪"
+        onClose={() => setGuardianChild(null)}
+      >
+        {guardianChild && <GuardiansManager child={guardianChild} />}
+      </Modal>
     </div>
   );
 }
@@ -526,9 +523,11 @@ export function DirectoraView({
 function ChildCard({
   child,
   onDeleted,
+  onManageGuardians,
 }: {
   child: Child;
   onDeleted: () => Promise<void>;
+  onManageGuardians: () => void;
 }) {
   return (
     <Card className="space-y-3">
@@ -565,19 +564,220 @@ function ChildCard({
         <span className="text-sm font-semibold text-ink/60">
           {formatMoney(child.monthlyFee)}/mes
         </span>
-        <Button
-          size="sm"
-          variant="danger"
-          onClick={async () => {
-            if (!confirm(`¿Dar de baja a ${child.name}?`)) return;
-            await apiDelete(`/children/${child.id}`);
-            await onDeleted();
-          }}
-        >
-          Dar de baja
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="soft" onClick={onManageGuardians}>
+            👪 Tutores
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={async () => {
+              if (!confirm(`¿Dar de baja a ${child.name}?`)) return;
+              await apiDelete(`/children/${child.id}`);
+              await onDeleted();
+            }}
+          >
+            Dar de baja
+          </Button>
+        </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * Gestion de tutores de UN alumno: alta, edicion y borrado individuales
+ * (ya no se reemplaza la lista entera en cada guardado, como era antes).
+ */
+function GuardiansManager({ child }: { child: Child }) {
+  const [tutors, setTutors] = useState<Guardian[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setError(null);
+      const full = await apiGet<Child & { guardians: Guardian[] }>(
+        `/children/${child.id}`,
+      );
+      setTutors(full.guardians);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar');
+    }
+  }, [child.id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function removeTutor(id: string) {
+    if (!confirm('¿Quitar este tutor?')) return;
+    setBusyId(id);
+    try {
+      await apiDelete(`/guardians/${id}`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo quitar');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function saveTutor(id: string, f: FormData) {
+    setBusyId(id);
+    try {
+      await apiPatch(`/guardians/${id}`, {
+        name: f.get('name'),
+        phone: f.get('phone') || null,
+        email: f.get('email') || null,
+        isPrimary: f.get('isPrimary') === 'on',
+      });
+      setEditingId(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (!tutors) return <Spinner label="Cargando tutores…" />;
+
+  return (
+    <div className="space-y-4">
+      <ErrorText>{error}</ErrorText>
+
+      {tutors.length === 0 ? (
+        <p className="text-sm text-ink/45">Este alumno todavía no tiene tutores.</p>
+      ) : (
+        <div className="space-y-2">
+          {tutors.map((tutor) =>
+            editingId === tutor.id ? (
+              <form
+                key={tutor.id}
+                className="space-y-2 rounded-2xl bg-background p-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveTutor(tutor.id, new FormData(e.currentTarget));
+                }}
+              >
+                <Input name="name" defaultValue={tutor.name} required placeholder="Nombre" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input name="phone" defaultValue={tutor.phone ?? ''} placeholder="Teléfono" />
+                  <Input name="email" type="email" defaultValue={tutor.email ?? ''} placeholder="Email" />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-ink/70">
+                  <input
+                    type="checkbox"
+                    name="isPrimary"
+                    defaultChecked={tutor.isPrimary}
+                    className="h-4 w-4 rounded accent-primary"
+                  />
+                  Contacto principal
+                </label>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" loading={busyId === tutor.id}>
+                    Guardar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingId(null)}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div
+                key={tutor.id}
+                className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-ink">
+                    {tutor.name}
+                    {tutor.isPrimary && (
+                      <Badge tone="bg-secondary/30 text-ink">
+                        <span className="ml-1">principal</span>
+                      </Badge>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-ink/50">
+                    {[tutor.phone, tutor.email].filter(Boolean).join(' · ') || 'Sin contacto'}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingId(tutor.id)}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={busyId === tutor.id}
+                    onClick={() => removeTutor(tutor.id)}
+                  >
+                    Quitar
+                  </Button>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      )}
+
+      <AddGuardianForm childId={child.id} onAdded={load} />
+    </div>
+  );
+}
+
+function AddGuardianForm({
+  childId,
+  onAdded,
+}: {
+  childId: string;
+  onAdded: () => Promise<void>;
+}) {
+  const { error, busy, submit } = useFormSubmit(onAdded);
+
+  return (
+    <form
+      className="space-y-2 border-t border-secondary/25 pt-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const f = new FormData(form);
+        void submit(async () => {
+          await apiPost(`/children/${childId}/guardians`, {
+            name: f.get('name'),
+            phone: f.get('phone') || null,
+            email: f.get('email') || null,
+            isPrimary: f.get('isPrimary') === 'on',
+          });
+          form.reset();
+        });
+      }}
+    >
+      <p className="text-sm font-semibold text-ink/70">+ Añadir tutor</p>
+      <Input name="name" required placeholder="Nombre completo" />
+      <div className="grid grid-cols-2 gap-2">
+        <Input name="phone" placeholder="Teléfono" />
+        <Input name="email" type="email" placeholder="Email" />
+      </div>
+      <label className="flex items-center gap-2 text-sm text-ink/70">
+        <input type="checkbox" name="isPrimary" className="h-4 w-4 rounded accent-primary" />
+        Contacto principal
+      </label>
+      <ErrorText>{error}</ErrorText>
+      <Button type="submit" size="sm" loading={busy}>
+        Añadir
+      </Button>
+    </form>
   );
 }
 

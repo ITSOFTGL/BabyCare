@@ -95,6 +95,33 @@ export function currentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** Valor para un <input type="date"> que representa "hoy" en la zona horaria
+ * LOCAL del navegador (nunca uses toISOString() para esto: convierte a UTC y
+ * cerca de medianoche puede devolver el dia equivocado). */
+export function todayLocalInputValue(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Convierte un valor de <input type="date"> (AAAA-MM-DD, sin zona horaria)
+ * en el rango [medianoche, medianoche+1) de ESE dia en la zona horaria LOCAL
+ * del navegador, expresado como instantes UTC (ISO) listos para mandar a la
+ * API. Es la contraparte de que el servidor ya no interpreta fechas sueltas
+ * con su propia zona horaria (los contenedores corren en UTC).
+ */
+export function dayBoundsLocal(dateStr: string): { from: string; to: string } {
+  const [year, month, day] = dateStr.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const from = new Date(year, month - 1, day, 0, 0, 0, 0);
+  const to = new Date(year, month - 1, day, 23, 59, 59, 999);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
 export function initials(name: string): string {
   return name
     .split(' ')

@@ -1,25 +1,26 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ROLE_LABELS } from '@kidcare/types';
 import { useAuth } from '@/lib/auth';
-import { TENANT_NAME } from '@/lib/api';
-import { initials } from '@/lib/format';
-import { Button, Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { NotificationBell } from '@/components/NotificationBell';
+import { DesktopSidebar, MobileDrawer } from '@/components/Sidebar';
+import { DashboardTopbarTitle } from '@/components/DashboardTopbarTitle';
 
 /**
  * Guardia de la zona privada: sin token valido nadie ve el panel, se redirige
- * a /login. Tambien pinta la cabecera comun a los tres roles.
+ * a /login. Tambien pinta el sidebar (fijo en desktop, drawer en movil) y la
+ * barra superior comunes a los tres roles.
  */
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -29,45 +30,36 @@ export default function DashboardLayout({
   if (!user) return <Spinner label="Redirigiendo al inicio de sesión…" />;
 
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-secondary/25 bg-background/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <div className="flex h-11 w-11 shrink-0 animate-float items-center justify-center rounded-2xl bg-primary text-xl shadow-lift">
-            🧸
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold leading-tight text-primary">
-              KidCare
-            </p>
-            <p className="truncate text-xs font-medium text-ink/50">
-              {TENANT_NAME}
-            </p>
-          </div>
+    <Suspense fallback={<Spinner label="Cargando panel…" />}>
+      <div className="min-h-dvh">
+        <DesktopSidebar />
+        <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-          <div className="hidden text-right sm:block">
-            <p className="truncate text-sm font-semibold text-ink">
-              {user.name}
-            </p>
-            <p className="text-xs text-ink/50">{ROLE_LABELS[user.role]}</p>
-          </div>
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-secondary/35 text-sm font-bold text-ink"
-            title={`${user.name} · ${ROLE_LABELS[user.role]}`}
-          >
-            {initials(user.name)}
-          </div>
+        <div className="lg:pl-72">
+          <header className="sticky top-0 z-30 border-b border-secondary/25 bg-background/85 backdrop-blur">
+            <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Abrir menú"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-xl text-ink/70 transition hover:bg-secondary/25 lg:hidden"
+              >
+                ☰
+              </button>
 
-          <NotificationBell />
+              <div className="min-w-0 flex-1">
+                <DashboardTopbarTitle />
+              </div>
 
-          <Button variant="ghost" size="sm" onClick={logout}>
-            Salir
-          </Button>
+              <NotificationBell />
+            </div>
+          </header>
+
+          <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+            {children}
+          </main>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        {children}
-      </main>
-    </div>
+      </div>
+    </Suspense>
   );
 }

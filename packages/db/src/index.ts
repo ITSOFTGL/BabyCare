@@ -10,6 +10,7 @@ export {
   inArray,
   gte,
   lte,
+  lt,
   count,
   isNotNull,
 } from 'drizzle-orm';

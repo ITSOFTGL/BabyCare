@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { eq, getDb, guardians } from '@kidcare/db';
-import { paramId, parseBody } from '../lib/validate.ts';
+import { paramId, parseBody, uuidSchema } from '../lib/validate.ts';
 import { guardianSchema } from './children.ts';
 import {
   requireAuth,
@@ -26,6 +26,7 @@ guardianRoutes.patch('/:id', async (c) => {
   if (body.name !== undefined) patch.name = body.name.trim();
   if (body.phone !== undefined) patch.phone = body.phone;
   if (body.email !== undefined) patch.email = body.email ? body.email : null;
+  if (body.ci !== undefined) patch.ci = body.ci;
   if (body.isPrimary !== undefined) patch.isPrimary = body.isPrimary;
 
   const [updated] = await getDb()

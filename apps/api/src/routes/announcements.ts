@@ -13,6 +13,7 @@ import {
 } from '@kidcare/db';
 import { parseBody, uuidSchema } from '../lib/validate.ts';
 import { notifyUser } from '../lib/notify.ts';
+import { createAnnouncementChat } from '../lib/chat.ts';
 import {
   requireAuth,
   requireDirectora,
@@ -48,9 +49,9 @@ const sendSchema = z.discriminatedUnion('audience', [
 export const announcementRoutes = new Hono<AppEnv>();
 
 // Solo la directora envia comunicados; son avisos oficiales de la guarderia.
-announcementRoutes.use('*', requireAuth, requireDirectora);
+announcementRoutes.use('*', requireAuth);
 
-announcementRoutes.get('/', async (c) => {
+announcementRoutes.get('/', requireDirectora, async (c) => {
   const rows = await getDb()
     .select()
     .from(announcements)
@@ -59,7 +60,7 @@ announcementRoutes.get('/', async (c) => {
   return c.json(rows);
 });
 
-announcementRoutes.post('/', async (c) => {
+announcementRoutes.post('/', requireDirectora, async (c) => {
   const body = await parseBody(c, sendSchema);
   const db = getDb();
   const user = c.get('user');
@@ -131,5 +132,14 @@ announcementRoutes.post('/', async (c) => {
     ),
   );
 
-  return c.json(created, 201);
+  const chat = await createAnnouncementChat({
+    announcementId: created!.id,
+    title,
+    body: message,
+    createdBy: user.id,
+    parentIds: recipientParentIds,
+    roomId,
+  });
+
+  return c.json({ ...created, chatId: chat.id }, 201);
 });

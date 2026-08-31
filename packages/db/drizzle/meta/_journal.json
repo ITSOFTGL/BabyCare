@@ -29,6 +29,13 @@
       "when": 1787566671030,
       "tag": "0003_smooth_tiger_shark",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788150000000,
+      "tag": "0004_bolivia_ops",
+      "breakpoints": true
     }
   ]
 }

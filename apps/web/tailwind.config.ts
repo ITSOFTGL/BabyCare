@@ -1,12 +1,11 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Paleta unica de KidCare. Usa siempre estos tokens (`bg-primary`, `text-ink`,
- * `bg-background`, `rounded-card`...) en lugar de colores sueltos de Tailwind,
- * para que toda la app se vea consistente.
+ * Sistema visual KidCare — atelier infantil de alta gama.
+ * Tokens únicos: usa siempre `bg-primary`, `text-ink`, `bg-canvas`,
+ * `rounded-card`… Nunca colores sueltos de Tailwind en la UI.
  *
- * Los colores `accent-*` son SOLO para distinguir salas y niveles entre si,
- * nunca como paleta general de la interfaz.
+ * Los `accent-*` distinguen salas y niveles entre sí, no estados.
  */
 const config: Config = {
   content: [
@@ -17,54 +16,75 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#F97316',
-          dark: '#EA580C',
+        canvas: '#F3EEE6',
+        surface: '#FFFCF7',
+        ink: {
+          DEFAULT: '#1F1A14',
+          soft: '#5C5348',
+          mute: '#8A8074',
         },
-        secondary: '#FBBF24',
-        background: '#FFFBEB',
-        ink: '#1E293B',
+        primary: {
+          DEFAULT: '#C45C3E',
+          dark: '#9A3F28',
+          light: '#E8C4B4',
+        },
+        sage: {
+          DEFAULT: '#4A6B5C',
+          light: '#D7E4DC',
+        },
+        gold: {
+          DEFAULT: '#C4A46A',
+          light: '#F0E6D0',
+        },
+        background: '#F3EEE6',
+        secondary: '#C4A46A',
         accent: {
-          pink: '#FB7185',
-          green: '#34D399',
-          blue: '#60A5FA',
-          purple: '#A78BFA',
+          pink: '#E8B4B8',
+          green: '#A8C5B4',
+          blue: '#A8C0D4',
+          purple: '#C8B8D8',
         },
       },
       borderRadius: {
-        card: '24px',
+        card: '20px',
         pill: '999px',
       },
       boxShadow: {
-        // Un pelin mas presente que antes: las cards se sentian casi planas
-        // sobre el fondo crema por falta de profundidad real.
-        soft: '0 1px 2px -1px rgba(30, 41, 59, 0.06), 0 12px 28px -14px rgba(30, 41, 59, 0.22)',
-        lift: '0 18px 40px -16px rgba(249, 115, 22, 0.45)',
-        // Elevacion sutil para elementos flotantes (dropdowns, menus) que
-        // necesitan separarse del contenido sin la fuerza de `lift`.
-        pop: '0 4px 12px -4px rgba(30, 41, 59, 0.12), 0 12px 24px -8px rgba(30, 41, 59, 0.14)',
+        soft: '0 1px 2px rgba(31, 26, 20, 0.04), 0 10px 28px -16px rgba(31, 26, 20, 0.18)',
+        lift: '0 16px 40px -18px rgba(196, 92, 62, 0.42)',
+        pop: '0 8px 32px -10px rgba(31, 26, 20, 0.22)',
+        inset: 'inset 0 1px 0 rgba(255, 255, 255, 0.65)',
       },
       fontFamily: {
-        sans: ['var(--font-quicksand)', 'ui-rounded', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-jakarta)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-fraunces)', 'Georgia', 'serif'],
+      },
+      letterSpacing: {
+        tightest: '-0.03em',
       },
       keyframes: {
         'fade-up': {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         pop: {
-          '0%': { opacity: '0', transform: 'scale(0.96)' },
+          '0%': { opacity: '0', transform: 'scale(0.97)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-6px)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
       },
       animation: {
-        'fade-up': 'fade-up 0.35s ease-out both',
-        pop: 'pop 0.2s ease-out both',
-        float: 'float 3s ease-in-out infinite',
+        'fade-up': 'fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both',
+        pop: 'pop 0.22s ease-out both',
+        float: 'float 5s ease-in-out infinite',
+        shimmer: 'shimmer 2.4s linear infinite',
       },
     },
   },

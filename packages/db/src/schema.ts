@@ -31,6 +31,8 @@ export const turnEnum = pgEnum('turn', ['manana', 'tarde', 'completo']);
 export const activityTypeEnum = pgEnum('activity_type', [
   'biberon',
   'comida',
+  'merienda',
+  'almuerzo',
   'siesta',
   'panal',
   'observacion',
@@ -38,11 +40,13 @@ export const activityTypeEnum = pgEnum('activity_type', [
 
 export const paymentStatusEnum = pgEnum('payment_status', [
   'pendiente',
+  'en_revision',
   'pagado',
 ]);
 
 export const paymentMethodEnum = pgEnum('payment_method', [
   'efectivo',
+  'qr',
   'transferencia',
   'tarjeta',
   'otro',
@@ -145,6 +149,7 @@ export const guardians = pgTable('guardians', {
   name: text('name').notNull(),
   phone: text('phone'),
   email: text('email'),
+  ci: text('ci'),
   isPrimary: boolean('is_primary').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
@@ -196,8 +201,12 @@ export const payments = pgTable('payments', {
   method: paymentMethodEnum('method'),
   observation: text('observation'),
   paidAt: timestamp('paid_at', { withTimezone: true }),
-  /** Se asigna al marcar el pago como pagado; el PDF vive en STORAGE_DIR/invoices/{id}.pdf. */
   invoiceNumber: text('invoice_number').unique(),
+  periodStart: date('period_start'),
+  dueDate: date('due_date'),
+  payerName: text('payer_name'),
+  payerCi: text('payer_ci'),
+  proofPath: text('proof_path'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -271,6 +280,77 @@ export const revokedTokens = pgTable('revoked_tokens', {
     .defaultNow(),
 });
 
+export const extraCharges = pgTable('extra_charges', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  childId: uuid('child_id')
+    .notNull()
+    .references(() => children.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().default('otro'),
+  description: text('description'),
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  recordedBy: uuid('recorded_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  activityId: uuid('activity_id').references(() => dailyActivities.id, {
+    onDelete: 'set null',
+  }),
+  paymentId: uuid('payment_id').references(() => payments.id, {
+    onDelete: 'set null',
+  }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const chats = pgTable('chats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  kind: text('kind').notNull(),
+  title: text('title').notNull(),
+  roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'cascade' }),
+  announcementId: uuid('announcement_id').references(() => announcements.id, {
+    onDelete: 'cascade',
+  }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const chatMembers = pgTable('chat_members', {
+  chatId: uuid('chat_id')
+    .notNull()
+    .references(() => chats.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  joinedAt: timestamp('joined_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const chatMessages = pgTable('chat_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatId: uuid('chat_id')
+    .notNull()
+    .references(() => chats.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const settings = pgTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value'),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type ExtraChargeRow = typeof extraCharges.$inferSelect;
+export type ChatRow = typeof chats.$inferSelect;
+export type ChatMemberRow = typeof chatMembers.$inferSelect;
+export type ChatMessageRow = typeof chatMessages.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
 export type NewUserRow = typeof users.$inferInsert;
 export type LevelRow = typeof levels.$inferSelect;

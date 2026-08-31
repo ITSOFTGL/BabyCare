@@ -11,10 +11,13 @@ import {
   inArray,
   levels,
   rooms,
+  users,
 } from '@kidcare/db';
 import { TURNS } from '@kidcare/types';
 import { paramId, parseBody, parseQuery, uuidSchema } from '../lib/validate.ts';
 import { canAccessChild, getVisibleChildIds } from '../lib/scope.ts';
+import { createLoginUser, uniqueEmail } from '../lib/account.ts';
+import { addParentToRoomChat } from '../lib/chat.ts';
 import {
   requireAuth,
   requireDirectora,
@@ -25,6 +28,7 @@ export const guardianSchema = z.object({
   name: z.string().min(2),
   phone: z.string().optional().nullable(),
   email: z.string().email().optional().nullable().or(z.literal('')),
+  ci: z.string().optional().nullable(),
   isPrimary: z.boolean().default(false),
 });
 
@@ -43,6 +47,16 @@ const childSchema = z.object({
   parentId: uuidSchema.nullable().optional(),
   monthlyFee: z.coerce.number().min(0).optional().nullable(),
   guardians: z.array(guardianSchema).optional(),
+  parentAccount: z
+    .object({
+      name: z.string().min(2),
+      password: z.string().min(8),
+      email: z.string().email().optional().nullable().or(z.literal('')),
+      phone: z.string().optional().nullable(),
+      ci: z.string().optional().nullable(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export const childRoutes = new Hono<AppEnv>();
@@ -117,6 +131,7 @@ async function replaceGuardians(
       name: g.name.trim(),
       phone: g.phone ?? null,
       email: g.email ? g.email : null,
+      ci: g.ci ?? null,
       isPrimary: g.isPrimary,
     })),
   );
@@ -125,6 +140,19 @@ async function replaceGuardians(
 childRoutes.post('/', requireDirectora, async (c) => {
   const body = await parseBody(c, childSchema);
   const db = getDb();
+
+  let parentId = body.parentId ?? null;
+  if (body.parentAccount) {
+    const email = await uniqueEmail(body.parentAccount.name, body.parentAccount.email);
+    const user = await createLoginUser({
+      name: body.parentAccount.name,
+      email,
+      password: body.parentAccount.password,
+      role: 'padre',
+      phone: body.parentAccount.phone,
+    });
+    parentId = user.id;
+  }
 
   const [created] = await db
     .insert(children)
@@ -138,7 +166,7 @@ childRoutes.post('/', requireDirectora, async (c) => {
       allergies: body.allergies ?? null,
       medications: body.medications ?? null,
       observations: body.observations ?? null,
-      parentId: body.parentId ?? null,
+      parentId,
       monthlyFee:
         body.monthlyFee === null || body.monthlyFee === undefined
           ? null
@@ -146,7 +174,21 @@ childRoutes.post('/', requireDirectora, async (c) => {
     })
     .returning();
 
-  if (body.guardians) await replaceGuardians(created!.id, body.guardians);
+  if (body.parentAccount && parentId) {
+    const [parent] = await db.select().from(users).where(eq(users.id, parentId)).limit(1);
+    await db.insert(guardians).values({
+      childId: created!.id,
+      name: body.parentAccount.name.trim(),
+      phone: body.parentAccount.phone ?? null,
+      email: parent?.email ?? null,
+      ci: body.parentAccount.ci ?? null,
+      isPrimary: true,
+    });
+  } else if (body.guardians) {
+    await replaceGuardians(created!.id, body.guardians);
+  }
+
+  await addParentToRoomChat(body.roomId, parentId);
 
   const [full] = await listChildren([created!.id]);
   return c.json(full, 201);
@@ -182,10 +224,14 @@ childRoutes.patch('/:id', requireDirectora, async (c) => {
       .update(children)
       .set(patch)
       .where(eq(children.id, id))
-      .returning({ id: children.id });
+      .returning({ id: children.id, roomId: children.roomId, parentId: children.parentId });
     if (!updated) {
       throw new HTTPException(404, { message: 'Alumno no encontrado' });
     }
+    await addParentToRoomChat(
+      (patch.roomId as string | null | undefined) ?? updated.roomId,
+      (patch.parentId as string | null | undefined) ?? updated.parentId,
+    );
   }
 
   // Los tutores YA NO se reemplazan aqui en bloque: usa POST /:id/guardians
@@ -217,6 +263,7 @@ childRoutes.post('/:id/guardians', requireDirectora, async (c) => {
       name: body.name.trim(),
       phone: body.phone ?? null,
       email: body.email ? body.email : null,
+      ci: body.ci ?? null,
       isPrimary: body.isPrimary,
     })
     .returning();

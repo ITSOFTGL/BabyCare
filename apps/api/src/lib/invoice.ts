@@ -4,28 +4,20 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { count, getDb, isNotNull, payments } from '@kidcare/db';
 import { env } from '../env.ts';
 
-// Mismos tonos que el sistema de diseno del frontend (primary/ink/muted).
-const PRIMARY = rgb(0.976, 0.451, 0.086);
-const INK = rgb(0.118, 0.161, 0.231);
-const MUTED = rgb(0.42, 0.46, 0.52);
-const LINE = rgb(0.91, 0.91, 0.91);
+const CLAY = rgb(0.769, 0.361, 0.243);
+const INK = rgb(0.122, 0.102, 0.078);
+const MUTED = rgb(0.36, 0.325, 0.282);
+const LINE = rgb(0.86, 0.82, 0.76);
+const CREAM = rgb(0.976, 0.965, 0.941);
 
 function invoicesDir(): string {
   return path.join(env.storageDir, 'invoices');
 }
 
-/** Ruta en disco donde vive (o vivira) la factura de un pago. */
 export function invoiceFilePath(paymentId: string): string {
   return path.join(invoicesDir(), `${paymentId}.pdf`);
 }
 
-/**
- * Numero de factura secuencial por guarderia: como cada base de datos es de
- * una sola guarderia (ver esquema), un contador simple basta. La ligera
- * ventana de carrera entre leer el conteo y guardar (si dos pagos se cobran
- * exactamente al mismo tiempo) es aceptable para el volumen de una
- * guarderia; no hace falta un bloqueo dedicado.
- */
 export async function nextInvoiceNumber(): Promise<string> {
   const db = getDb();
   const [row] = await db
@@ -34,7 +26,7 @@ export async function nextInvoiceNumber(): Promise<string> {
     .where(isNotNull(payments.invoiceNumber));
   const seq = (row?.n ?? 0) + 1;
   const year = new Date().getFullYear();
-  return `INV-${year}-${String(seq).padStart(5, '0')}`;
+  return `REC-${year}-${String(seq).padStart(4, '0')}`;
 }
 
 export interface InvoiceData {
@@ -46,84 +38,100 @@ export interface InvoiceData {
   amount: string;
   method: string | null;
   paidAt: Date;
+  payerName?: string | null;
+  payerCi?: string | null;
+  periodStart?: string | null;
+  dueDate?: string | null;
 }
 
-/** Genera el PDF de la factura y lo guarda en STORAGE_DIR/invoices/{paymentId}.pdf. */
+function moneyBs(amount: string | number): string {
+  const n = Number(amount);
+  return `${n.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs`;
+}
+
 export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   const doc = await PDFDocument.create();
-  const page = doc.addPage([595.28, 841.89]); // A4
+  const page = doc.addPage([595.28, 841.89]);
   const { width, height } = page.getSize();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const marginX = 56;
-  let y = height - 70;
-
-  page.drawText(data.tenantName, { x: marginX, y, size: 22, font: bold, color: PRIMARY });
-  y -= 20;
-  page.drawText('Recibo de pago', { x: marginX, y, size: 12, font, color: MUTED });
-
+  page.drawRectangle({ x: 0, y: height - 120, width, height: 120, color: CLAY });
+  page.drawText(data.tenantName.toUpperCase(), {
+    x: 48,
+    y: height - 52,
+    size: 18,
+    font: bold,
+    color: CREAM,
+  });
+  page.drawText('Recibo de mensualidad', {
+    x: 48,
+    y: height - 76,
+    size: 12,
+    font,
+    color: rgb(0.94, 0.88, 0.82),
+  });
   page.drawText(data.invoiceNumber, {
-    x: width - marginX - bold.widthOfTextAtSize(data.invoiceNumber, 12),
-    y: height - 70,
+    x: width - 48 - bold.widthOfTextAtSize(data.invoiceNumber, 12),
+    y: height - 52,
     size: 12,
     font: bold,
-    color: INK,
+    color: CREAM,
   });
-  const dateLabel = data.paidAt.toLocaleDateString('es-ES', {
+  const dateLabel = data.paidAt.toLocaleDateString('es-BO', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
   });
   page.drawText(dateLabel, {
-    x: width - marginX - font.widthOfTextAtSize(dateLabel, 10),
-    y: height - 90,
+    x: width - 48 - font.widthOfTextAtSize(dateLabel, 10),
+    y: height - 76,
     size: 10,
     font,
-    color: MUTED,
+    color: rgb(0.94, 0.88, 0.82),
   });
 
-  y -= 40;
-  page.drawLine({
-    start: { x: marginX, y },
-    end: { x: width - marginX, y },
-    thickness: 1,
-    color: LINE,
-  });
-  y -= 36;
-
+  let y = height - 170;
   const row = (label: string, value: string) => {
-    page.drawText(label, { x: marginX, y, size: 11, font: bold, color: INK });
-    page.drawText(value, { x: marginX + 160, y, size: 11, font, color: INK });
-    y -= 24;
+    page.drawText(label.toUpperCase(), { x: 48, y, size: 8, font: bold, color: MUTED });
+    page.drawText(value || '—', { x: 48, y: y - 16, size: 12, font, color: INK });
+    y -= 44;
   };
 
+  row('A nombre de / apoderado', data.payerName ?? '—');
+  row('Cédula de identidad', data.payerCi ?? '—');
   row('Alumno', data.childName);
-  row('Concepto', 'Mensualidad de guardería');
-  row('Meses cubiertos', data.months.join(', '));
-  row('Método de pago', data.method ?? 'No especificado');
+  row('Periodo cubierto', data.months.join(', ') || 'Mensualidad');
+  if (data.periodStart && data.dueDate) {
+    row('Vigencia', `${data.periodStart}  →  vence ${data.dueDate}`);
+  }
+  const methodLabel =
+    data.method === 'qr'
+      ? 'QR'
+      : data.method === 'efectivo'
+        ? 'Efectivo'
+        : data.method ?? 'No especificado';
+  row('Método de pago', methodLabel);
 
-  y -= 16;
-  page.drawLine({
-    start: { x: marginX, y },
-    end: { x: width - marginX, y },
-    thickness: 1,
-    color: LINE,
-  });
-  y -= 44;
+  y -= 8;
+  page.drawLine({ start: { x: 48, y }, end: { x: width - 48, y }, thickness: 1, color: LINE });
+  y -= 36;
 
-  page.drawText('Total pagado', { x: marginX, y: y + 4, size: 14, font: bold, color: INK });
-  const amountLabel = `${Number(data.amount).toFixed(2)} €`;
+  page.drawRectangle({ x: 48, y: y - 28, width: width - 96, height: 56, color: rgb(0.96, 0.93, 0.88) });
+  page.drawText('Total cobrado', { x: 64, y: y + 4, size: 10, font, color: MUTED });
+  const amountLabel = moneyBs(data.amount);
   page.drawText(amountLabel, {
-    x: width - marginX - bold.widthOfTextAtSize(amountLabel, 20),
+    x: width - 64 - bold.widthOfTextAtSize(amountLabel, 20),
     y,
     size: 20,
     font: bold,
-    color: PRIMARY,
+    color: CLAY,
   });
 
-  const footer = 'Generado automáticamente por KidCare.';
-  page.drawText(footer, { x: marginX, y: 70, size: 9, font, color: MUTED });
+  page.drawText(
+    'Documento generado por KidCare. Conservar como constancia de pago.',
+    { x: 48, y: 64, size: 9, font, color: MUTED },
+  );
 
   const bytes = await doc.save();
   await fs.mkdir(invoicesDir(), { recursive: true });

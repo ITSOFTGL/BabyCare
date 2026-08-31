@@ -85,6 +85,41 @@ export const apiPatch = <T>(path: string, data: unknown = {}) =>
 export const apiDelete = <T>(path: string) =>
   api<T>(path, { method: 'DELETE' });
 
+export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${getApiUrl()}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    throw new ApiError(body?.error ?? `Error ${res.status}`, res.status, body?.details);
+  }
+  return body as T;
+}
+
+export function qrImageUrl() {
+  return `${getApiUrl()}/settings/qr`;
+}
+
+/** El QR vive en otro origen: hay que pedirlo con cookie, no vale un <img src>. */
+export async function fetchQrObjectUrl(): Promise<string> {
+  const res = await fetch(qrImageUrl(), { credentials: 'include' });
+  if (!res.ok) {
+    throw new ApiError('No hay QR cargado', res.status);
+  }
+  return URL.createObjectURL(await res.blob());
+}
+
+export function whatsappLink(phone: string | null | undefined, text: string) {
+  if (!phone) return null;
+  const n = phone.replace(/\D/g, '');
+  if (n.length < 8) return null;
+  const withCc = n.startsWith('591') ? n : `591${n.replace(/^0/, '')}`;
+  return `https://wa.me/${withCc}?text=${encodeURIComponent(text)}`;
+}
+
 /**
  * Descarga un archivo binario protegido (la factura en PDF) y dispara el
  * guardado en el navegador. No usa `api()` porque la respuesta no es JSON.

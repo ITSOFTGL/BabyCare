@@ -7,10 +7,12 @@ import {
   dailyActivities,
   desc,
   eq,
+  extraCharges,
   getDb,
   gte,
   inArray,
   lte,
+  rooms,
   users,
 } from '@kidcare/db';
 import { ACTIVITY_LABELS, ACTIVITY_TYPES } from '@kidcare/types';
@@ -42,8 +44,15 @@ const createSchema = z.object({
   childId: uuidSchema,
   type: z.enum(ACTIVITY_TYPES),
   description: z.string().max(1000).optional().nullable(),
-  /** Momento real de la actividad; por defecto, ahora. */
   recordedAt: z.string().datetime().optional(),
+  extra: z
+    .object({
+      kind: z.enum(['panal', 'leche', 'otro']),
+      amount: z.coerce.number().min(0),
+      description: z.string().optional().nullable(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export const activityRoutes = new Hono<AppEnv>();
@@ -81,10 +90,13 @@ activityRoutes.get('/', async (c) => {
       activity: dailyActivities,
       childName: children.name,
       recordedByName: users.name,
+      roomId: children.roomId,
+      roomName: rooms.name,
     })
     .from(dailyActivities)
     .innerJoin(children, eq(dailyActivities.childId, children.id))
     .leftJoin(users, eq(dailyActivities.recordedBy, users.id))
+    .leftJoin(rooms, eq(children.roomId, rooms.id))
     .where(active.length ? and(...active) : undefined)
     .orderBy(desc(dailyActivities.recordedAt))
     .limit(query.limit);
@@ -94,6 +106,8 @@ activityRoutes.get('/', async (c) => {
       ...r.activity,
       childName: r.childName,
       recordedByName: r.recordedByName,
+      roomId: r.roomId,
+      roomName: r.roomName,
     })),
   );
 });
@@ -138,6 +152,25 @@ activityRoutes.post('/', requireStaff, async (c) => {
       type: 'agenda',
       data: { activityId: created!.id, childId: body.childId },
     });
+  }
+
+  if (body.extra && body.extra.amount > 0) {
+    await db.insert(extraCharges).values({
+      childId: body.childId,
+      kind: body.extra.kind,
+      description: body.extra.description ?? null,
+      amount: body.extra.amount.toFixed(2),
+      recordedBy: user.id,
+      activityId: created!.id,
+    });
+    if (child?.parentId) {
+      await notifyUser({
+        userId: child.parentId,
+        title: `Cargo extra de ${child.name}`,
+        message: `${body.extra.kind}: ${body.extra.amount.toFixed(2)} Bs`,
+        type: 'pago',
+      });
+    }
   }
 
   return c.json(created, 201);

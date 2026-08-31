@@ -1,12 +1,19 @@
 import type { Metadata, Viewport } from 'next';
-import { Quicksand } from 'next/font/google';
+import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth';
 import './globals.css';
 
-const quicksand = Quicksand({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-quicksand',
+  variable: '--font-jakarta',
+  display: 'swap',
+});
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-fraunces',
   display: 'swap',
 });
 
@@ -26,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F97316',
+  themeColor: '#C45C3E',
   width: 'device-width',
   initialScale: 1,
 };
@@ -36,8 +43,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Igual que el titulo: leidos por el servidor Node en cada request, no
-  // inlineados en el bundle del navegador como los NEXT_PUBLIC_* clasicos.
   const runtimeConfig = {
     apiUrl:
       process.env.API_URL ??
@@ -48,7 +53,7 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="es" className={quicksand.variable}>
+    <html lang="es" className={`${jakarta.variable} ${fraunces.variable}`}>
       <head>
         <script
           id="kidcare-runtime-config"
@@ -58,7 +63,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-dvh bg-background text-ink">
+      <body className="min-h-dvh bg-canvas font-sans text-ink">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

@@ -17,6 +17,9 @@ import { notificationRoutes } from './routes/notifications.ts';
 import { announcementRoutes } from './routes/announcements.ts';
 import { pushRoutes } from './routes/push.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
+import { chatRoutes } from './routes/chats.ts';
+import { chargeRoutes } from './routes/charges.ts';
+import { settingsRoutes } from './routes/settings.ts';
 
 const app = new Hono<AppEnv>();
 
@@ -54,6 +57,9 @@ app.route('/api/notifications', notificationRoutes);
 app.route('/api/announcements', announcementRoutes);
 app.route('/api/push', pushRoutes);
 app.route('/api/dashboard', dashboardRoutes);
+app.route('/api/chats', chatRoutes);
+app.route('/api/charges', chargeRoutes);
+app.route('/api/settings', settingsRoutes);
 
 app.notFound((c) => c.json({ error: 'Ruta no encontrada' }, 404));
 

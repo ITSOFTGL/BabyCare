@@ -13,4 +13,5 @@ export {
   lt,
   count,
   isNotNull,
+  isNull,
 } from 'drizzle-orm';

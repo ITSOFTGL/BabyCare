@@ -43,10 +43,7 @@ export function formatMoney(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === '') return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(n);
+  return `${n.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Bs`;
 }
 
 export function formatDate(value: string | null | undefined): string {
@@ -120,6 +117,12 @@ export function dayBoundsLocal(dateStr: string): { from: string; to: string } {
   const from = new Date(year, month - 1, day, 0, 0, 0, 0);
   const to = new Date(year, month - 1, day, 23, 59, 59, 999);
   return { from: from.toISOString(), to: to.toISOString() };
+}
+
+/** Convierte ISO o AAAA-MM-DD a valor de <input type="date">. */
+export function toDateInput(value: string | null | undefined): string {
+  if (!value) return '';
+  return value.slice(0, 10);
 }
 
 export function initials(name: string): string {

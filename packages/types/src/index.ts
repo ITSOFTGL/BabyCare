@@ -14,17 +14,20 @@ export type Turn = (typeof TURNS)[number];
 export const ACTIVITY_TYPES = [
   'biberon',
   'comida',
+  'merienda',
+  'almuerzo',
   'siesta',
   'panal',
   'observacion',
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
-export const PAYMENT_STATUSES = ['pendiente', 'pagado'] as const;
+export const PAYMENT_STATUSES = ['pendiente', 'en_revision', 'pagado'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const PAYMENT_METHODS = [
   'efectivo',
+  'qr',
   'transferencia',
   'tarjeta',
   'otro',
@@ -66,6 +69,8 @@ export const TURN_LABELS: Record<Turn, string> = {
 export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   biberon: 'Biberón',
   comida: 'Comida',
+  merienda: 'Merienda',
+  almuerzo: 'Almuerzo',
   siesta: 'Siesta',
   panal: 'Cambio de pañal',
   observacion: 'Observación',
@@ -74,10 +79,50 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
 export const ACTIVITY_EMOJI: Record<ActivityType, string> = {
   biberon: '🍼',
   comida: '🍽️',
+  merienda: '🍎',
+  almuerzo: '🍲',
   siesta: '😴',
   panal: '🧷',
   observacion: '📝',
 };
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  qr: 'QR',
+  transferencia: 'Transferencia',
+  tarjeta: 'Tarjeta',
+  otro: 'Otro',
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  pendiente: 'Pendiente',
+  en_revision: 'Por verificar',
+  pagado: 'Pagado',
+};
+
+export const CHARGE_KINDS = ['panal', 'leche', 'otro'] as const;
+export type ChargeKind = (typeof CHARGE_KINDS)[number];
+
+export const CHARGE_KIND_LABELS: Record<ChargeKind, string> = {
+  panal: 'Pañal',
+  leche: 'Leche',
+  otro: 'Otro',
+};
+
+/** Email de acceso a partir del nombre: Carla Diaz → carla.diaz@guarderia.test */
+export function suggestEmail(fullName: string, domain = 'guarderia.test'): string {
+  const parts = fullName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return `usuario@${domain}`;
+  if (parts.length === 1) return `${parts[0]}@${domain}`;
+  return `${parts[0]}.${parts[parts.length - 1]}@${domain}`;
+}
 
 export interface User {
   id: string;
@@ -116,6 +161,7 @@ export interface Guardian {
   name: string;
   phone: string | null;
   email: string | null;
+  ci: string | null;
   isPrimary: boolean;
   createdAt: string;
 }
@@ -162,6 +208,8 @@ export interface DailyActivity {
   createdAt: string;
   childName?: string;
   recordedByName?: string | null;
+  roomId?: string | null;
+  roomName?: string | null;
 }
 
 export interface Payment {
@@ -174,8 +222,47 @@ export interface Payment {
   observation: string | null;
   paidAt: string | null;
   invoiceNumber: string | null;
+  periodStart: string | null;
+  dueDate: string | null;
+  payerName: string | null;
+  payerCi: string | null;
+  proofPath: string | null;
   createdAt: string;
   childName?: string;
+}
+
+export interface ExtraCharge {
+  id: string;
+  childId: string;
+  kind: ChargeKind | string;
+  description: string | null;
+  amount: string;
+  recordedBy: string | null;
+  activityId: string | null;
+  paymentId: string | null;
+  createdAt: string;
+  childName?: string;
+  recordedByName?: string | null;
+}
+
+export interface Chat {
+  id: string;
+  kind: 'sala' | 'comunicado' | string;
+  title: string;
+  roomId: string | null;
+  announcementId: string | null;
+  createdAt: string;
+  lastMessage?: string | null;
+  lastAt?: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  chatId: string;
+  userId: string | null;
+  body: string;
+  createdAt: string;
+  authorName?: string | null;
 }
 
 export interface Notification {

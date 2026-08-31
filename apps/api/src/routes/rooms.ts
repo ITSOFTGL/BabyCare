@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { asc, eq, getDb, levels, rooms } from '@kidcare/db';
 import { TURNS } from '@kidcare/types';
 import { paramId, parseBody, uuidSchema } from '../lib/validate.ts';
+import { ensureRoomChat } from '../lib/chat.ts';
 import {
   requireAuth,
   requireDirectora,
@@ -41,6 +42,7 @@ roomRoutes.post('/', requireDirectora, async (c) => {
       capacity: body.capacity,
     })
     .returning();
+  await ensureRoomChat(created!.id, created!.name);
   return c.json(created, 201);
 });
 

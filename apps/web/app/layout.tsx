@@ -17,6 +17,9 @@ const fraunces = Fraunces({
   display: 'swap',
 });
 
+/** Sin esto Next prerendera /login y congela API_URL a localhost del build. */
+export const dynamic = 'force-dynamic';
+
 /**
  * Se lee en CADA request (generateMetadata corre en el servidor por
  * peticion), no se congela en el build: la misma imagen `kidcare-frontend`

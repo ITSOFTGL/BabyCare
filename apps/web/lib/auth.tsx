@@ -10,11 +10,11 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AuthResponse, User } from '@kidcare/types';
-import { api, apiPost } from './api';
+import { api, apiPost, setAccessToken } from './api';
 
 interface AuthState {
   user: User | null;
-  /** true mientras se comprueba la sesion (cookie httpOnly) al cargar la pagina. */
+  /** true mientras se comprueba la sesion al cargar la pagina. */
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
@@ -29,8 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const refresh = useCallback(async () => {
-    // No hay forma de leer una cookie httpOnly desde JS, asi que la unica
-    // manera de saber si hay sesion es preguntarle a la API.
     try {
       const data = await api<{ user: User }>('/auth/me');
       setUser(data.user);
@@ -50,8 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
-    // El token ya quedo en la cookie httpOnly que puso la API; no se
-    // persiste nada mas en el navegador.
+    setAccessToken(data.token);
     setUser(data.user);
     return data.user;
   }, []);
@@ -60,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void apiPost('/auth/logout', {}).catch(() => {
       // Si la API no responde igual queremos sacar al usuario del panel.
     });
+    setAccessToken(null);
     setUser(null);
     router.replace('/login');
   }, [router]);

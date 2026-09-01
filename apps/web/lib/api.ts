@@ -28,6 +28,32 @@ export function getTenantName(): string {
   return process.env.NEXT_PUBLIC_TENANT_NAME ?? 'KidCare';
 }
 
+/**
+ * Token para demos con API en otro origen (Railway). En un solo dominio
+ * la cookie httpOnly sigue valiendo; Bearer cubre el caso de dos URLs.
+ */
+const TOKEN_KEY = 'kidcare_token';
+
+export function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(TOKEN_KEY);
+}
+
+export function setAccessToken(token: string | null | undefined) {
+  if (typeof window === 'undefined') return;
+  if (token) window.localStorage.setItem(TOKEN_KEY, token);
+  else window.localStorage.removeItem(TOKEN_KEY);
+}
+
+function withAuthHeaders(headers?: HeadersInit): Headers {
+  const next = new Headers(headers);
+  const token = getAccessToken();
+  if (token && !next.has('Authorization')) {
+    next.set('Authorization', `Bearer ${token}`);
+  }
+  return next;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -40,24 +66,21 @@ export class ApiError extends Error {
 }
 
 /**
- * Cliente HTTP de la API. La sesion viaja en una cookie httpOnly (no en
- * localStorage, a salvo de XSS): `credentials: 'include'` es lo que hace que
- * el navegador la adjunte sola en cada request. Convierte cualquier
- * respuesta no-2xx en un ApiError con el mensaje que manda el backend.
+ * Cliente HTTP. En el mismo dominio usa la cookie; si web y API están
+ * en URLs distintas (demo Railway) manda también Authorization: Bearer.
  */
 export async function api<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const { headers, ...rest } = options;
+  const merged = withAuthHeaders(headers);
+  if (!merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
 
   const res = await fetch(`${getApiUrl()}${path}`, {
     ...rest,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
+    headers: merged,
   });
 
   const text = await res.text();
@@ -89,6 +112,7 @@ export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
   const res = await fetch(`${getApiUrl()}${path}`, {
     method: 'POST',
     credentials: 'include',
+    headers: withAuthHeaders(),
     body: form,
   });
   const text = await res.text();
@@ -105,7 +129,10 @@ export function qrImageUrl() {
 
 /** El QR vive en otro origen: hay que pedirlo con cookie, no vale un <img src>. */
 export async function fetchQrObjectUrl(): Promise<string> {
-  const res = await fetch(qrImageUrl(), { credentials: 'include' });
+  const res = await fetch(qrImageUrl(), {
+    credentials: 'include',
+    headers: withAuthHeaders(),
+  });
   if (!res.ok) {
     throw new ApiError('No hay QR cargado', res.status);
   }
@@ -125,7 +152,10 @@ export function whatsappLink(phone: string | null | undefined, text: string) {
  * guardado en el navegador. No usa `api()` porque la respuesta no es JSON.
  */
 export async function downloadFile(path: string, filename: string): Promise<void> {
-  const res = await fetch(`${getApiUrl()}${path}`, { credentials: 'include' });
+  const res = await fetch(`${getApiUrl()}${path}`, {
+    credentials: 'include',
+    headers: withAuthHeaders(),
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     let message = `Error ${res.status}`;

@@ -17,7 +17,14 @@ export function getDatabaseUrl(): string {
  * donde conviene cerrar el pool explicitamente al terminar.
  */
 export function createClient(url = getDatabaseUrl(), max = 10) {
-  const sql = postgres(url, { max });
+  const wantSsl =
+    process.env.DATABASE_SSL === 'true' ||
+    /sslmode=require/i.test(url) ||
+    /railway\.(internal|app)|rlwy\.net/i.test(url);
+  const sql = postgres(url, {
+    max,
+    ssl: wantSsl ? { rejectUnauthorized: false } : undefined,
+  });
   return { sql, db: drizzle(sql, { schema }) };
 }
 

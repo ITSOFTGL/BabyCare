@@ -33,6 +33,5 @@ RUN mkdir -p /app/storage/invoices && chown -R bun:bun /app/storage
 USER bun
 EXPOSE 3001
 
-# Las migraciones se aplican al arrancar: cada instancia es duena de su propia
-# base de datos, asi que no hay riesgo de que dos clientes migren la misma.
-CMD ["sh", "-c", "bun packages/db/src/migrate.ts && bun apps/api/src/index.ts"]
+# Migraciones + seed de demo al arrancar (el seed es idempotente).
+CMD ["sh", "-c", "bun packages/db/src/migrate.ts && bun packages/db/src/seed.ts && bun apps/api/src/index.ts"]

@@ -65,30 +65,31 @@ export default function LoginPage() {
 
         <div className="relative max-w-md">
           <p className="font-display text-4xl font-semibold leading-[1.15] tracking-tight text-balance xl:text-5xl">
-            El día a día de la casa, con la calma de un atelier.
+            Un hogar para tu niño. Tú también puedes estar cerca.
           </p>
           <p className="mt-6 text-base leading-relaxed text-surface/70">
-            Alumnos, equipo, agenda y pagos en un solo lugar. Pensado para
-            directoras que quieren cuidar sin perder el detalle.
+            Desde el celular o la computadora ves el día a día de la casa: cómo
+            está, qué hizo y quién lo cuida. Con la calma de saber que está en
+            buenas manos.
           </p>
           <ul className="mt-10 space-y-3 text-sm text-surface/65">
             <li className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-              Fichas médicas y personas autorizadas
+              Solo lo recoge quien está autorizado
             </li>
             <li className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-              Agenda diaria visible para las familias
+              Ficha médica y recados siempre a mano
             </li>
             <li className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-              Cobros, facturas y comunicados
+              Agenda del día visible para las familias
             </li>
           </ul>
         </div>
 
         <p className="relative text-xs tracking-wide text-surface/40">
-          KidCare · gestión boutique para guarderías
+          KidCare · cuidado con la calma de un hogar
         </p>
       </aside>
 
@@ -161,7 +162,7 @@ export default function LoginPage() {
           )}
 
           <p className="mt-8 text-center text-xs text-ink-mute lg:text-left">
-            ¿No tienes cuenta? Pídesela a la dirección de la guardería.
+            ¿No tienes cuenta? Pídesela a la dirección o comunícate con dirección.
           </p>
         </div>
       </section>

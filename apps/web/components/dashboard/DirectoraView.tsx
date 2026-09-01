@@ -1887,7 +1887,7 @@ function PaymentForm({
   const { error, busy, submit } = useFormSubmit(onDone);
   const editing = Boolean(initial);
   const [childId, setChildId] = useState(initial?.childId ?? '');
-  const [method, setMethod] = useState(initial?.method ?? 'efectivo');
+  const [method, setMethod] = useState<string>(initial?.method ?? 'efectivo');
   const [payerName, setPayerName] = useState(initial?.payerName ?? '');
   const [payerCi, setPayerCi] = useState(initial?.payerCi ?? '');
   const selected = students.find((c) => c.id === childId);
